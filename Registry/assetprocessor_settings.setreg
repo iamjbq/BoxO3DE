@@ -1,0 +1,18 @@
+{
+    "Amazon": {
+        "AssetProcessor": {
+            "Settings": {
+                "ScanFolder BoxO3DE/Assets": {
+                    "watch": "@GEMROOT:BoxO3DE@/Assets",
+                    "recursive": 1,
+                    "order": 101
+                },
+                "ScanFolder BoxO3DE/Registry": {
+                    "watch": "@GEMROOT:BoxO3DE@/Registry",
+                    "recursive": 1,
+                    "order": 102
+                }
+            }
+        }
+    }
+}
