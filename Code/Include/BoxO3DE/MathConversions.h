@@ -55,18 +55,32 @@ AZ_FORCE_INLINE b3Matrix3 Box3DMathConvert(const AZ::Matrix3x3& inMat)
 //     return b3Tr
 // }
 
-// Why is there only Jolt->AZ direction for this one?
-// AZ_FORCE_INLINE AZ::Aabb Box3DMathConvert(const JPH::AABox& bounds)
-// {
-//     // check that the Jolt bounds are valid, otherwise CreateFromMinMax will assert.
-//     if (bounds.IsValid())
-//     {
-//         return AZ::Aabb::CreateFromMinMax(Box3DMathConvert(bounds.mMin), Box3DMathConvert(bounds.mMax));
-//     }
-//     return AZ::Aabb::CreateNull();
-// }
-//
-// AZ_FORCE_INLINE AZ::Transform Box3DMathConvert(const JPH::Vec3& position, const JPH::Quat& rotation)
-// {
-//     return AZ::Transform::CreateFromQuaternionAndTranslation(Box3DMathConvert(rotation), Box3DMathConvert(position));
-// }
+
+inline AZ::Aabb Box3DMathConvert(const b3AABB& bounds)
+{
+    // check that the Box3D bounds are valid, otherwise CreateFromMinMax will assert.
+    
+    if (b3IsValidAABB(bounds))
+    {
+        return AZ::Aabb::CreateFromMinMax(Box3DMathConvert(bounds.lowerBound), Box3DMathConvert(bounds.upperBound));
+    }
+    return AZ::Aabb::CreateNull();
+}
+
+inline b3Transform Box3DMathConvert(const AZ::Transform& azTransform)
+{
+    AZ::Quaternion azQuat = azTransform.GetRotation();
+    AZ::Vector3 azVec3 = azTransform.GetTranslation();
+
+    return { Box3DMathConvert(azVec3), b3NormalizeQuat(Box3DMathConvert(azQuat)) };
+}
+
+inline AZ::Transform Box3DMathConvert(const b3Transform& box3DTransform)
+{
+    return AZ::Transform::CreateFromQuaternionAndTranslation(Box3DMathConvert(box3DTransform.q), Box3DMathConvert(box3DTransform.p));
+}
+
+inline b3Transform Box3DMathConvert(const AZ::Vector3& position, const AZ::Quaternion& rotation)
+{
+    return { Box3DMathConvert(position), Box3DMathConvert(rotation) };
+}

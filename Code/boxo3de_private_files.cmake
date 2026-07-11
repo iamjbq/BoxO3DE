@@ -12,10 +12,15 @@ set(FILES
     Source/BoxO3DEModule.cpp
     Source/BoxO3DEModule.h
         
+    Source/Common/Box3DSceneQueryHelpers.cpp
+    Source/Common/Box3DSceneQueryHelpers.h
+        
     Source/Clients/BoxO3DESystemComponent.cpp
     Source/Clients/BoxO3DESystemComponent.h
     Source/Clients/DefaultWorldComponent.cpp
     Source/Clients/DefaultWorldComponent.h
+    Source/Clients/Shape.cpp
+    Source/Clients/Shape.h
         
     Source/Configuration/Box3DConfiguration.cpp
     Source/Configuration/Box3DSettingsRegistryManager.cpp

@@ -17,4 +17,9 @@ namespace B3
 
         return bodyData;
     }
+
+    inline Physics::Shape* Utils::GetUserData(const b3ShapeId shapeId)
+    {
+        return (B3_IS_NULL(shapeId)) ? nullptr : static_cast<Physics::Shape*>(b3Shape_GetUserData(shapeId));
+    }
 }
