@@ -61,6 +61,7 @@ namespace B3
 
         AZ::u32 m_sanity = SanityValue;
         BodyIdUniquePtr m_bodyIdPtr;
+        b3BodyId m_bodyId = b3_nullBodyId;
 
         struct Payload
         {

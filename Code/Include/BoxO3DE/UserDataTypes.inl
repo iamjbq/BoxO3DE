@@ -12,6 +12,7 @@ namespace B3
         };
 
         m_bodyIdPtr = BodyIdUniquePtr(&bodyId, nullUserData);
+        m_bodyId = bodyId;
         b3Body_SetUserData(bodyId, this);
     }
 

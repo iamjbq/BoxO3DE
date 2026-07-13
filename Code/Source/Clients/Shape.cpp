@@ -4,12 +4,16 @@
 #include <AzFramework/Physics/Common/PhysicsSceneQueries.h>
 #include <AzFramework/Physics/Material/PhysicsMaterial.h>
 #include <AzFramework/Physics/ShapeConfiguration.h>
+#include <AzFramework/Physics/Material/PhysicsMaterialManager.h>
+#include <AzFramework/Physics/Collision/CollisionGroups.h>
+#include <AzFramework/Physics/Collision/CollisionLayers.h>
 
-// #include <Common/PhysXSceneQueryHelpers.h>
+#include <Common/Box3DSceneQueryHelpers.h>
 #include <BoxO3DE//Utils.h>
 #include <BoxO3DE/Material/Box3DMaterial.h>
 // #include <Source/Collision.h>
 // #include <Source/Utils.h>
+#include <AzFramework/Physics/CollisionBus.h>
 #include <BoxO3DE/MathConversions.h>
 
 namespace B3
@@ -65,21 +69,48 @@ namespace B3
         : m_collisionLayer(colliderConfiguration.m_collisionLayer)
     {
         m_shapeConfiguration = shapeConfiguration.Clone();
-        if (physx::PxShape* newShape = Utils::CreatePxShapeFromConfig(colliderConfiguration, shapeConfiguration, m_collisionGroup)) // TODO: the biggie
+        m_tag = AZ::Crc32(colliderConfiguration.m_tag);
+        Physics::CollisionRequestBus::BroadcastResult(m_collisionGroup, &Physics::CollisionRequests::GetCollisionGroupById, colliderConfiguration.m_collisionGroupId);
+        
+        AZStd::vector<AZStd::shared_ptr<Material>> materials = Material::FindOrCreateMaterials(colliderConfiguration.m_materialSlots); // Have access to materialId here
+        AZStd::vector<b3SurfaceMaterial> box3DMaterials(materials.size());
+        for (size_t materialIndex = 0; materialIndex < materials.size(); ++materialIndex)
         {
-            // m_box3DShapePtr = Box3DShapeUniquePtr(newShape, AZStd::bind(&Shape::ReleasePxShape, this, newShape));
-
-            ExtractMaterialsFromBox3DShape();
-
-            m_tag = AZ::Crc32(colliderConfiguration.m_tag);
+            box3DMaterials[materialIndex] = materials[materialIndex]->GetNativeMaterial();
         }
-    }
-
-    Shape::Shape(b3ShapeId nativeShape)
-    {
-        // m_box3DShapePtr = Box3DShapeUniquePtr(nativeShape, AZStd::bind(&Shape::ReleasePxShape, this, nativeShape));
-
-        ExtractMaterialsFromBox3DShape();
+        
+        b3Filter collisionFilter = b3DefaultFilter();
+        collisionFilter.categoryBits = colliderConfiguration.m_collisionLayer.GetMask();
+        collisionFilter.maskBits = m_collisionGroup.GetMask();
+        
+        b3ShapeDef newShapeDef = b3DefaultShapeDef();
+        newShapeDef.userData = this;
+        if (shapeConfiguration.GetShapeType() == Physics::ShapeType::TriangleMesh || shapeConfiguration.GetShapeType() == Physics::ShapeType::CookedMesh)
+        {
+            newShapeDef.materials = box3DMaterials.data();
+            newShapeDef.materialCount = static_cast<int>(box3DMaterials.size());
+        }
+        else
+        {
+            newShapeDef.baseMaterial = box3DMaterials.front();
+            newShapeDef.density = materials.front()->GetDensity();
+        }
+        newShapeDef.explosionScale = 1.0f;
+        newShapeDef.filter = collisionFilter;
+        newShapeDef.isSensor = colliderConfiguration.m_isTrigger;
+        newShapeDef.enableContactEvents = true;
+        newShapeDef.enableContactEvents = true;
+        newShapeDef.enableHitEvents = true;
+        newShapeDef.updateBodyMass = true;
+        
+        // TODO: either create util fn to return the specific geometry type (b3Sphere, or b3HullShape for box) as variant or store def and defer to AttachedToBody()
+        // if (physx::PxShape* newShape = Utils::CreatePxShapeFromConfig(colliderConfiguration, shapeConfiguration, m_collisionGroup)) 
+        // {
+        //     // m_box3DShapePtr = Box3DShapeUniquePtr(newShape, AZStd::bind(&Shape::ReleasePxShape, this, newShape));
+        //
+        //     ExtractMaterialsFromBox3DShape();
+        //
+        // }
     }
 
     Shape::~Shape()
@@ -95,14 +126,10 @@ namespace B3
         m_attachedBody = b3_nullBodyId;
     }
 
-    // physx::PxShape* Shape::GetPxShape()
-    // {
-    //     if (m_box3DShapePtr)
-    //     {
-    //         return m_box3DShapePtr.get();
-    //     }
-    //     return nullptr;
-    // }
+    b3ShapeId Shape::GetShapeId() const
+    {
+        return m_shapeId;
+    }
 
     void Shape::SetMaterial(const AZStd::shared_ptr<Physics::Material>& material)
     {
@@ -239,11 +266,12 @@ namespace B3
 
     void Shape::SetName(const char* name)
     {
-        
+        m_name = name;
     }
 
     void Shape::SetLocalPose(const AZ::Vector3& offset, const AZ::Quaternion& rotation)
     {
+        AZ_UNUSED_2(offset, rotation);
         // physx::PxTransform pxShapeTransform = PxMathConvert(offset, rotation);
         // AZ_Warning("Physics::Shape", m_box3DShapePtr->isExclusive(), "Non-exclusive shapes are not mutable after they're attached to a body.");
         // if (m_box3DShapePtr->getGeometry().getType() == physx::PxGeometryType::eCAPSULE)
@@ -330,22 +358,27 @@ namespace B3
         return false;
     }
 
-    void Shape::AttachedToActor(void* actor)
+    void Shape::AttachedToActor(void* attachedBody)
     {
-        b3BodyId* bodyId = static_cast<b3BodyId*>(actor);
+        // TODO: take the body and create the actual shape here with the known Id.
+        // This is where the shape is actually created
+        b3BodyId* bodyId = static_cast<b3BodyId*>(attachedBody);
         if (b3Body_IsValid(*bodyId))
         {
             m_attachedBody = *bodyId;
+
+            // m_shapeId = Utils::CreateBox3DShapeFromConfig();
         }
     }
 
     void Shape::DetachedFromActor()
     {
-        m_attachedBody = b3_nullBodyId;
+        b3DestroyShape(m_shapeId, true);
     }
 
     AzPhysics::SceneQueryHit Shape::RayCastInternal(const AzPhysics::RayCastRequest& worldSpaceRequest, const b3WorldTransform& pose)
     {
+        AZ_UNUSED(pose);
         if (const bool shouldCollide = worldSpaceRequest.m_collisionGroup.GetMask() & m_collisionLayer.GetMask();
             !shouldCollide)
         {
@@ -358,19 +391,20 @@ namespace B3
         // const physx::PxHitFlags hitFlags = SceneQueryHelpers::GetPxHitFlags(worldSpaceRequest.m_hitFlags);
         
         b3QueryFilter filter = b3DefaultQueryFilter();
-        b3BodyCastResult output = b3Body_CastRay(m_attachedBody, start, translation, filter, 1.0f, pose);
+        // b3RayResult result = b3World_CastRayClosest(b3Shape_GetWorld(m_shapeId), start, translation, filter);
+        b3WorldCastOutput result = b3Shape_RayCast(m_shapeId, start, translation);
         
-        if (output.hit)
+        if (result.hit)
         {
             AzPhysics::SceneQueryHit hit;
             
-            hit.m_distance = b3Distance(output.point, start);
+            hit.m_distance = b3Distance(result.point, start);
             hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Distance;
             
-            hit.m_position = Box3DMathConvert(output.point);
+            hit.m_position = Box3DMathConvert(result.point);
             hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Position;
             
-            hit.m_normal = Box3DMathConvert(output.normal);
+            hit.m_normal = Box3DMathConvert(result.normal);
             hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Normal;
             
             const BodyData* bodyData = Utils::GetUserData(m_attachedBody);
@@ -386,16 +420,18 @@ namespace B3
                 hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::EntityId;
             }
             
-            hit.m_shape = Utils::GetUserData(output.shapeId);
+            hit.m_shape = Utils::GetUserData(m_shapeId);
             if (hit.m_shape != nullptr)
             {
                 hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Shape;
             }
             
-            // TODO: how materials are accessed depends on shape type (mesh, heightfield, or simple)
-            if (output.userMaterialId != 0)
+            b3SurfaceMaterial material = b3Shape_GetMeshSurfaceMaterial(m_shapeId, result.triangleIndex);
+            
+            if (material.userMaterialId != 0)
             {
-                // somehow get Box3D material by id on b3SurfaceMaterial
+                
+                // AZ::Interface<Physics::MaterialManager>::Get()->GetMaterial(material.userMaterialId);
             }
             else if (hit.m_shape != nullptr)
             {
@@ -427,6 +463,7 @@ namespace B3
 
     AZ::Aabb Shape::GetAabb(const AZ::Transform& worldTransform) const
     {
+        AZ_UNUSED(worldTransform);
         return Box3DMathConvert(b3Shape_GetAABB(m_shapeId));
     }
 
@@ -452,6 +489,7 @@ namespace B3
 
     void Shape::GetGeometry(AZStd::vector<AZ::Vector3>& vertices, AZStd::vector<AZ::u32>& indices, const AZ::Aabb* optionalBounds) const
     {
+        AZ_UNUSED_3(vertices, indices, optionalBounds);
         // if (!m_box3DShapePtr)
         // {
         //     return;

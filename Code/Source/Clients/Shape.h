@@ -29,7 +29,6 @@ namespace B3
         AZ_RTTI(Shape, "{7A79E4C1-2FD4-4709-9838-CFBA7CD94FEA}", Physics::Shape);
 
         Shape(const Physics::ColliderConfiguration& colliderConfiguration, const Physics::ShapeConfiguration& configuration);
-        Shape(b3ShapeId nativeShape);
         virtual ~Shape();
 
         Shape(Shape&& shape);
@@ -55,8 +54,8 @@ namespace B3
         void* GetNativePointer() override;
         const void* GetNativePointer() const override;
         AZ::Crc32 GetTag() const override;
-        void AttachedToActor(void* actor) override;
-        void DetachedFromActor() override;
+        void AttachedToActor(void* attachedBody) override; //!< Constructs final shape and attaches to provided body
+        void DetachedFromActor() override; //!< Deletes the shape from the body
         AzPhysics::SceneQueryHit RayCast(const AzPhysics::RayCastRequest& worldSpaceRequest, const AZ::Transform& worldTransform) override;
         AzPhysics::SceneQueryHit RayCastLocal(const AzPhysics::RayCastRequest& localSpaceRequest) override;
         AZ::Aabb GetAabb(const AZ::Transform& worldTransform) const override;
@@ -66,6 +65,7 @@ namespace B3
             const AZ::Aabb* optionalBounds = nullptr) const override;
 
         // physx::PxShape* GetPxShape();
+        b3ShapeId GetShapeId() const;
 
         void SetBox3DMaterials(const AZStd::vector<AZStd::shared_ptr<B3::Material>>& materials);
         const AZStd::vector<AZStd::shared_ptr<B3::Material>>& GetBox3DMaterials();
@@ -89,6 +89,7 @@ namespace B3
         AzPhysics::CollisionGroup m_collisionGroup;
         AZStd::shared_ptr<Physics::ShapeConfiguration> m_shapeConfiguration;
         AZ::Crc32 m_tag;
+        AZStd::string m_name;
         b3BodyId m_attachedBody = b3_nullBodyId;
     };
 }

@@ -3,6 +3,8 @@
 #include <BoxO3DE/MathConversions.h>
 #include <System/Box3DSystem.h>
 #include <BoxO3DE/Utils.h>
+#include <Clients/Shape.h>
+#include <Clients/RigidBody.h>
 
 #include <AzCore/Console/IConsole.h>
 #include <AzCore/Debug/ProfilerBus.h>
@@ -42,65 +44,64 @@ namespace B3
     {
         bool AddShape(AZStd::variant<AzPhysics::RigidBody*, AzPhysics::StaticRigidBody*> simulatedBody, const AzPhysics::ShapeVariantData& shapeData)
         {
-            AZ_UNUSED_2(simulatedBody, shapeData)
-            // if (const auto* shapeColliderPair = AZStd::get_if<AzPhysics::ShapeColliderPair>(&shapeData))
-            // {
-            //     bool shapeAdded = false;
-            //     auto shapePtr = AZStd::make_shared<Shape>(*(shapeColliderPair->first), *(shapeColliderPair->second));
-            //     AZStd::visit([shapePtr, &shapeAdded](auto&& body)
-            //         {
-            //             if (shapePtr->GetPxShape())
-            //             {
-            //                 body->AddShape(shapePtr);
-            //                 shapeAdded = true;
-            //             }
-            //         }, simulatedBody);
-            //     return shapeAdded;
-            // }
-            // else if (const auto* shapeColliderPairList = AZStd::get_if<AZStd::vector<AzPhysics::ShapeColliderPair>>(&shapeData))
-            // {
-            //     bool shapeAdded = false;
-            //     for (const auto& shapeColliderConfigs : *shapeColliderPairList)
-            //     {
-            //         auto shapePtr = AZStd::make_shared<Shape>(*(shapeColliderConfigs.first), *(shapeColliderConfigs.second));
-            //         AZStd::visit([shapePtr, &shapeAdded](auto&& body)
-            //             {
-            //                 if (shapePtr->GetPxShape())
-            //                 {
-            //                     body->AddShape(shapePtr);
-            //                     shapeAdded = true;
-            //                 }
-            //             }, simulatedBody);
-            //     }
-            //     return shapeAdded;
-            // }
-            // else if (const auto* shape = AZStd::get_if<AZStd::shared_ptr<Physics::Shape>>(&shapeData))
-            // {
-            //     auto shapePtr = *shape;
-            //     AZStd::visit([shapePtr](auto&& body)
-            //         {
-            //             body->AddShape(shapePtr);
-            //         }, simulatedBody);
-            //     return true;
-            // }
-            // else if (const auto* shapeList = AZStd::get_if<AZStd::vector<AZStd::shared_ptr<Physics::Shape>>>(&shapeData))
-            // {
-            //     for (auto shapePtr : *shapeList)
-            //     {
-            //         AZStd::visit([shapePtr](auto&& body)
-            //             {
-            //                 body->AddShape(shapePtr);
-            //             }, simulatedBody);
-            //     }
-            //     return true;
-            // }
+            if (const auto* shapeColliderPair = AZStd::get_if<AzPhysics::ShapeColliderPair>(&shapeData))
+            {
+                bool shapeAdded = false;
+                auto shapePtr = AZStd::make_shared<Shape>(*(shapeColliderPair->first), *(shapeColliderPair->second));
+                AZStd::visit([shapePtr, &shapeAdded](auto&& body)
+                    {
+                        if (shapePtr)
+                        {
+                            body->AddShape(shapePtr); // TODO: shape creation will have to be done inside the body->AddShape since it REQUIRES a b3BodyId
+                            shapeAdded = true;
+                        }
+                    }, simulatedBody);
+                return shapeAdded;
+            }
+            else if (const auto* shapeColliderPairList = AZStd::get_if<AZStd::vector<AzPhysics::ShapeColliderPair>>(&shapeData))
+            {
+                bool shapeAdded = false;
+                for (const auto& shapeColliderConfigs : *shapeColliderPairList)
+                {
+                    auto shapePtr = AZStd::make_shared<Shape>(*(shapeColliderConfigs.first), *(shapeColliderConfigs.second));
+                    AZStd::visit([shapePtr, &shapeAdded](auto&& body)
+                        {
+                            if (shapePtr)
+                            {
+                                body->AddShape(shapePtr);
+                                shapeAdded = true;
+                            }
+                        }, simulatedBody);
+                }
+                return shapeAdded;
+            }
+            else if (const auto* shape = AZStd::get_if<AZStd::shared_ptr<Physics::Shape>>(&shapeData))
+            {
+                auto shapePtr = *shape;
+                AZStd::visit([shapePtr](auto&& body)
+                    {
+                        body->AddShape(shapePtr);
+                    }, simulatedBody);
+                return true;
+            }
+            else if (const auto* shapeList = AZStd::get_if<AZStd::vector<AZStd::shared_ptr<Physics::Shape>>>(&shapeData))
+            {
+                for (auto shapePtr : *shapeList)
+                {
+                    AZStd::visit([shapePtr](auto&& body)
+                        {
+                            body->AddShape(shapePtr);
+                        }, simulatedBody);
+                }
+                return true;
+            }
             return false;
         }
         
         template<class SimulatedBodyType, class ConfigurationType>
-        AzPhysics::SimulatedBody* CreateSimulatedBody(const ConfigurationType* configuration, AZ::Crc32& crc)
+        AzPhysics::SimulatedBody* CreateSimulatedBody(const ConfigurationType* configuration, AZ::Crc32& crc, b3WorldId& worldId)
         {
-            SimulatedBodyType* newBody = aznew SimulatedBodyType(*configuration);
+            SimulatedBodyType* newBody = aznew SimulatedBodyType(*configuration, worldId);
             if (!AZStd::holds_alternative<AZStd::monostate>(configuration->m_colliderAndShapeData))
             {
                 [[maybe_unused]] const bool shapeAdded = AddShape(newBody, configuration->m_colliderAndShapeData);
@@ -110,22 +111,21 @@ namespace B3
             return newBody;
         }
         
-        AzPhysics::SimulatedBody* CreateRigidBody(const AzPhysics::RigidBodyConfiguration* configuration, AZ::Crc32& crc)
+        AzPhysics::SimulatedBody* CreateRigidBody(const AzPhysics::RigidBodyConfiguration* configuration, AZ::Crc32& crc, b3WorldId& worldId)
         {
             AZ_UNUSED_2(configuration, crc)
-            // RigidBody* newBody = aznew RigidBody(*configuration);
-            // if (!AZStd::holds_alternative<AZStd::monostate>(configuration->m_colliderAndShapeData))
-            // {
-            //     [[maybe_unused]] const bool shapeAdded = AddShape(newBody, configuration->m_colliderAndShapeData);
-            //     AZ_Warning("Box3DScene", shapeAdded, "No Collider or Shape information found when creating Rigid body [%s]", configuration->m_debugName.c_str());
-            // }
-            // const AzPhysics::MassComputeFlags& flags = configuration->GetMassComputeFlags();
-            // newBody->UpdateMassProperties(flags, configuration->m_centerOfMassOffset,
-            //     configuration->m_inertiaTensor, configuration->m_mass);
-            //
-            // crc = AZ::Crc32(newBody, sizeof(*newBody));
-            // return newBody;
-            return nullptr;
+            RigidBody* newBody = aznew RigidBody(*configuration, worldId);
+            if (!AZStd::holds_alternative<AZStd::monostate>(configuration->m_colliderAndShapeData))
+            {
+                [[maybe_unused]] const bool shapeAdded = AddShape(newBody, configuration->m_colliderAndShapeData);
+                AZ_Warning("Box3DScene", shapeAdded, "No Collider or Shape information found when creating Rigid body [%s]", configuration->m_debugName.c_str());
+            }
+            const AzPhysics::MassComputeFlags& flags = configuration->GetMassComputeFlags();
+            newBody->UpdateMassProperties(flags, configuration->m_centerOfMassOffset,
+                configuration->m_inertiaTensor, configuration->m_mass);
+            
+            crc = AZ::Crc32(newBody, sizeof(*newBody));
+            return newBody;
         }
         
         AzPhysics::SimulatedBody* CreateCharacterBody(Box3DScene* scene,
@@ -440,12 +440,12 @@ namespace B3
         if (azrtti_istypeof<AzPhysics::RigidBodyConfiguration>(simulatedBodyConfig))
         {
             newBody = Internal::CreateRigidBody(
-                azdynamic_cast<const AzPhysics::RigidBodyConfiguration*>(simulatedBodyConfig), newBodyCrc);
+                azdynamic_cast<const AzPhysics::RigidBodyConfiguration*>(simulatedBodyConfig), newBodyCrc, m_worldId);
         }
         else if (azrtti_istypeof<AzPhysics::StaticRigidBodyConfiguration>(simulatedBodyConfig))
         {
             // newBody = Internal::CreateSimulatedBody<StaticRigidBody, AzPhysics::StaticRigidBodyConfiguration>(
-            //     azdynamic_cast<const AzPhysics::StaticRigidBodyConfiguration*>(simulatedBodyConfig), newBodyCrc);
+            //     azdynamic_cast<const AzPhysics::StaticRigidBodyConfiguration*>(simulatedBodyConfig), newBodyCrc, m_worldId);
         }
         else if (azrtti_istypeof<Physics::CharacterConfiguration>(simulatedBodyConfig))
         {

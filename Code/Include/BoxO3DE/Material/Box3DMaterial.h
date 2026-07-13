@@ -38,15 +38,15 @@ namespace B3
 
         inline constexpr AZStd::string_view FrictionName = "Friction";
         inline constexpr AZStd::string_view RestitutionName = "Restitution";
-        // inline constexpr AZStd::string_view DensityName = "Density";
+        inline constexpr AZStd::string_view DensityName = "Density";
         inline constexpr AZStd::string_view RollingResistanceName = "RollingResistance";
         inline constexpr AZStd::string_view TangentVelocityName = "TangentVelocity";
         inline constexpr AZStd::string_view RestitutionCombineModeName = "RestitutionCombineMode";
         inline constexpr AZStd::string_view FrictionCombineModeName = "FrictionCombineMode";
         inline constexpr AZStd::string_view DebugColorName = "DebugColor";
 
-        // inline constexpr float MinDensityLimit = 0.01f; //!< Minimum possible value of density.
-        // inline constexpr float MaxDensityLimit = 100000.0f; //!< Maximum possible value of density.
+        inline constexpr float MinDensityLimit = 0.01f; //!< Minimum possible value of density.
+        inline constexpr float MaxDensityLimit = 100000.0f; //!< Maximum possible value of density.
     }
     
     //! Runtime Box3D material instance.
@@ -95,6 +95,9 @@ namespace B3
         float GetRestitution() const;
         void SetRestitution(float restitution);
         
+        float GetDensity() const;
+        void SetDensity(float density);
+        
         float GetRollingResistance() const;
         void SetRollingResistance(float rollingResistance);
         
@@ -131,6 +134,7 @@ namespace B3
         
         float m_friction = 0.5;
         float m_restitution = 0.5f;
+        float m_density = 1000.0f;
         float m_rollingResistance = 0.0f; //!< Only used for spheres and capsules
         AZ::Vector3 m_tangentVelocity = AZ::Vector3::CreateZero();
         AZ::Color m_debugColor = AZ::Colors::LightBlue;

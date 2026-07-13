@@ -6,11 +6,14 @@ set(FILES
     Include/BoxO3DE/UserDataTypes.inl
     Include/BoxO3DE/Utils.h
     Include/BoxO3DE/Utils.inl
+    Include/BoxO3DE/NativeTypeIdentifiers.h
     Include/BoxO3DE/Material/Box3DMaterial.h
     Include/BoxO3DE/Material/Box3DMaterialConfiguration.h
     
     Source/BoxO3DEModule.cpp
     Source/BoxO3DEModule.h
+    Source/Utils.cpp
+    Source/Utils.h
         
     Source/Common/Box3DSceneQueryHelpers.cpp
     Source/Common/Box3DSceneQueryHelpers.h
@@ -21,6 +24,8 @@ set(FILES
     Source/Clients/DefaultWorldComponent.h
     Source/Clients/Shape.cpp
     Source/Clients/Shape.h
+    Source/Clients/RigidBody.cpp
+    Source/Clients/RigidBody.h
         
     Source/Configuration/Box3DConfiguration.cpp
     Source/Configuration/Box3DSettingsRegistryManager.cpp

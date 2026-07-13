@@ -12,6 +12,7 @@ namespace B3
     namespace SceneQueryHelpers
     {
         //! Helper function to convert from Box3D hit to AZ.
-        AzPhysics::SceneQueryHit GetHitFromPxHit(const b3CastOutput& box3DHit, const b3BodyId& bodyId, const b3ShapeId& shapeId);
+        AzPhysics::SceneQueryHit GetHitFromBodyCast(const b3CastOutput& box3DHit, const b3BodyId& bodyId, const b3ShapeId& shapeId);
+        AzPhysics::SceneQueryHit GetHitFromShapeRayCast(const b3CastOutput& box3DHit, const b3BodyId& bodyId, const b3ShapeId& shapeId);
     }
 }

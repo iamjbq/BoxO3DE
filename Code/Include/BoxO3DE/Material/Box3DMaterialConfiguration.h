@@ -18,7 +18,7 @@ namespace B3
 
         float m_Friction = 0.5f;
         float m_restitution = 0.5f;
-        // float m_density = 1000.0f;
+        float m_density = 1000.0f;
         float m_rollingResistance = 0.0f;
         AZ::Vector3 m_tangentVelocity = AZ::Vector3::CreateZero();
         AZ::Color m_debugColor = AZ::Colors::LightBlue;
@@ -33,7 +33,7 @@ namespace B3
         static void ValidateMaterialAsset(AZ::Data::Asset<Physics::MaterialAsset> materialAsset);
         
     private:
-        // static float GetMinDensityLimit();
-        // static float GetMaxDensityLimit();        
+        static float GetMinDensityLimit();
+        static float GetMaxDensityLimit();        
     };
 }

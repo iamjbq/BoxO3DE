@@ -20,7 +20,7 @@ namespace B3
                 ->Field("TangentVelocity", &MaterialConfiguration::m_tangentVelocity)
                 ->Field("FrictionCombine", &MaterialConfiguration::m_frictionCombine)
                 ->Field("RestitutionCombine", &MaterialConfiguration::m_restitutionCombine)
-                // ->Field("Density", &MaterialConfiguration::m_density)
+                ->Field("Density", &MaterialConfiguration::m_density)
                 ->Field("DebugColor", &MaterialConfiguration::m_debugColor)
                 ;
 
@@ -49,10 +49,10 @@ namespace B3
                         ->EnumAttribute(CombineMode::Minimum, "Minimum")
                         ->EnumAttribute(CombineMode::Maximum, "Maximum")
                         ->EnumAttribute(CombineMode::Multiply, "Multiply")
-                    // ->DataElement(AZ::Edit::UIHandlers::Default, &MaterialConfiguration::m_density, "Density", "Material density")
-                    //     ->Attribute(AZ::Edit::Attributes::Min, &MaterialConfiguration::GetMinDensityLimit)
-                    //     ->Attribute(AZ::Edit::Attributes::Max, &MaterialConfiguration::GetMaxDensityLimit)
-                    //     ->Attribute(AZ::Edit::Attributes::Suffix, " " + Physics::NameConstants::GetDensityUnit())
+                    ->DataElement(AZ::Edit::UIHandlers::Default, &MaterialConfiguration::m_density, "Density", "Material density")
+                        ->Attribute(AZ::Edit::Attributes::Min, &MaterialConfiguration::GetMinDensityLimit)
+                        ->Attribute(AZ::Edit::Attributes::Max, &MaterialConfiguration::GetMaxDensityLimit)
+                        ->Attribute(AZ::Edit::Attributes::Suffix, " " + Physics::NameConstants::GetDensityUnit())
                     ->DataElement(AZ::Edit::UIHandlers::Color, &MaterialConfiguration::m_debugColor, "Debug Color", "Debug color to use for this material")
                     ;
             }
@@ -69,7 +69,7 @@ namespace B3
         {
             {MaterialConstants::FrictionName, m_Friction},
             {MaterialConstants::RestitutionName, m_restitution},
-            // {MaterialConstants::DensityName, m_density},
+            {MaterialConstants::DensityName, m_density},
             {MaterialConstants::RestitutionCombineModeName, static_cast<AZ::u32>(m_restitutionCombine)},
             {MaterialConstants::FrictionCombineModeName, static_cast<AZ::u32>(m_frictionCombine)},
             {MaterialConstants::DebugColorName, m_debugColor}
@@ -124,7 +124,7 @@ namespace B3
                 MaterialConstants::RestitutionName,
                 MaterialConstants::RollingResistanceName,
                 MaterialConstants::TangentVelocityName,
-                // MaterialConstants::DensityName,
+                MaterialConstants::DensityName,
                 MaterialConstants::RestitutionCombineModeName,
                 MaterialConstants::FrictionCombineModeName,
                 MaterialConstants::DebugColorName
@@ -136,13 +136,13 @@ namespace B3
 #endif
     }
 
-    // float MaterialConfiguration::GetMinDensityLimit()
-    // {
-    //     return MaterialConstants::MinDensityLimit;
-    // }
-    //
-    // float MaterialConfiguration::GetMaxDensityLimit()
-    // {
-    //     return MaterialConstants::MaxDensityLimit;
-    // }
+    float MaterialConfiguration::GetMinDensityLimit()
+    {
+        return MaterialConstants::MinDensityLimit;
+    }
+    
+    float MaterialConfiguration::GetMaxDensityLimit()
+    {
+        return MaterialConstants::MaxDensityLimit;
+    }
 }

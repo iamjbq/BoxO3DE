@@ -116,6 +116,10 @@ namespace B3
         {
             return GetRestitution();
         }
+        else if (propertyName == MaterialConstants::DensityName)
+        {
+            return GetDensity();
+        }
         else if (propertyName == MaterialConstants::RollingResistanceName)
         {
             return GetRollingResistance();
@@ -152,6 +156,10 @@ namespace B3
         else if (propertyName == MaterialConstants::RestitutionName)
         {
             SetRestitution(value.GetValue<float>());
+        }
+        else if (propertyName == MaterialConstants::DensityName)
+        {
+            return SetDensity(value.GetValue<float>());
         }
         else if (propertyName == MaterialConstants::RollingResistanceName)
         {
@@ -209,6 +217,20 @@ namespace B3
         m_restitution = AZ::GetClamp(restitution, 0.0f, 1.0f);
         
         m_box3DMaterial.restitution = m_restitution;
+    }
+
+    float Material::GetDensity() const
+    {
+        return m_density;
+    }
+
+    void Material::SetDensity(float density)
+    {
+        AZ_Warning(
+            "Box3D Material", density >= MaterialConstants::MinDensityLimit && density <= MaterialConstants::MaxDensityLimit,
+            "Density value %f will be clamped into range [%f, %f].", density, MaterialConstants::MinDensityLimit, MaterialConstants::MaxDensityLimit);
+
+        m_density = AZ::GetClamp(density, MaterialConstants::MinDensityLimit, MaterialConstants::MaxDensityLimit);
     }
 
     float Material::GetRollingResistance() const
