@@ -76,7 +76,6 @@ namespace B3
         void BindMaterialsWithBox3DShape();
         void ExtractMaterialsFromBox3DShape();
         // physx::PxScene* GetScene() const;
-        // void ReleasePxShape(physx::PxShape* shape);
         AzPhysics::SceneQueryHit RayCastInternal(const AzPhysics::RayCastRequest& worldSpaceRequest, const b3WorldTransform& pose);
 
         // using Box3DShapeUniquePtr = AZStd::unique_ptr<b3ShapeId, AZStd::function<void(b3ShapeId*)>>;
@@ -84,10 +83,12 @@ namespace B3
 
         // Box3DShapeUniquePtr m_box3DShapePtr;
         b3ShapeId m_shapeId = b3_nullShapeId;
+        b3ShapeDef m_shapeDef;
         AZStd::vector<AZStd::shared_ptr<B3::Material>> m_materials;
         AzPhysics::CollisionLayer m_collisionLayer;
         AzPhysics::CollisionGroup m_collisionGroup;
         AZStd::shared_ptr<Physics::ShapeConfiguration> m_shapeConfiguration;
+        AZStd::shared_ptr<Physics::ColliderConfiguration> m_colliderConfiguration;
         AZ::Crc32 m_tag;
         AZStd::string m_name;
         b3BodyId m_attachedBody = b3_nullBodyId;

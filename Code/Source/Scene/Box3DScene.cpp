@@ -52,7 +52,7 @@ namespace B3
                     {
                         if (shapePtr)
                         {
-                            body->AddShape(shapePtr); // TODO: shape creation will have to be done inside the body->AddShape since it REQUIRES a b3BodyId
+                            body->AddShape(shapePtr);
                             shapeAdded = true;
                         }
                     }, simulatedBody);

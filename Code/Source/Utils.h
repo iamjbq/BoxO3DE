@@ -36,11 +36,10 @@ namespace B3
     namespace Utils
     {
         b3ShapeId CreateBox3DShapeFromConfig(
-            const Physics::ColliderConfiguration& colliderConfiguration, 
-            const Physics::ShapeConfiguration& shapeConfiguration, 
-            AzPhysics::CollisionGroup& assignedCollisionGroup
+            const Physics::ColliderConfiguration& colliderConfiguration,
+            const Physics::ShapeConfiguration& shapeConfiguration,
+            const b3ShapeDef& shapeDef, 
+            const b3BodyId& bodyId
         );
-        
-        
     }
 }

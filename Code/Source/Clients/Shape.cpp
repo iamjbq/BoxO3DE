@@ -12,7 +12,7 @@
 #include <BoxO3DE//Utils.h>
 #include <BoxO3DE/Material/Box3DMaterial.h>
 // #include <Source/Collision.h>
-// #include <Source/Utils.h>
+#include <Utils.h>
 #include <AzFramework/Physics/CollisionBus.h>
 #include <BoxO3DE/MathConversions.h>
 
@@ -33,7 +33,7 @@ namespace B3
         , m_collisionLayer(AZStd::move(shape.m_collisionLayer))
         , m_collisionGroup(AZStd::move(shape.m_collisionGroup))
     {
-        if (B3_IS_NON_NULL(m_shapeId))
+        if (b3Shape_IsValid(m_shapeId))
         {
             b3Shape_SetUserData(m_shapeId, this);
         }
@@ -47,7 +47,7 @@ namespace B3
         m_collisionLayer = AZStd::move(shape.m_collisionLayer);
         m_collisionGroup = AZStd::move(shape.m_collisionGroup);
 
-        if (B3_IS_NON_NULL(m_shapeId))
+        if (b3Shape_IsValid(m_shapeId))
         {
             b3Shape_SetUserData(m_shapeId, this);
         }
@@ -55,21 +55,13 @@ namespace B3
         return *this;
     }
 
-    // void Shape::ReleasePxShape(physx::PxShape* shape)
-    // {
-    //     if (shape != nullptr)
-    //     {
-    //         PHYSX_SCENE_WRITE_LOCK(GetScene());
-    //         shape->userData = nullptr;
-    //         shape->release();
-    //     }
-    // }
-
     Shape::Shape(const Physics::ColliderConfiguration& colliderConfiguration, const Physics::ShapeConfiguration& shapeConfiguration)
         : m_collisionLayer(colliderConfiguration.m_collisionLayer)
     {
         m_shapeConfiguration = shapeConfiguration.Clone();
+        m_colliderConfiguration = AZStd::make_shared<Physics::ColliderConfiguration>(m_shapeConfiguration);
         m_tag = AZ::Crc32(colliderConfiguration.m_tag);
+        
         Physics::CollisionRequestBus::BroadcastResult(m_collisionGroup, &Physics::CollisionRequests::GetCollisionGroupById, colliderConfiguration.m_collisionGroupId);
         
         AZStd::vector<AZStd::shared_ptr<Material>> materials = Material::FindOrCreateMaterials(colliderConfiguration.m_materialSlots); // Have access to materialId here
@@ -103,27 +95,19 @@ namespace B3
         newShapeDef.enableHitEvents = true;
         newShapeDef.updateBodyMass = true;
         
-        // TODO: either create util fn to return the specific geometry type (b3Sphere, or b3HullShape for box) as variant or store def and defer to AttachedToBody()
-        // if (physx::PxShape* newShape = Utils::CreatePxShapeFromConfig(colliderConfiguration, shapeConfiguration, m_collisionGroup)) 
-        // {
-        //     // m_box3DShapePtr = Box3DShapeUniquePtr(newShape, AZStd::bind(&Shape::ReleasePxShape, this, newShape));
-        //
-        //     ExtractMaterialsFromBox3DShape();
-        //
-        // }
+        m_shapeDef = newShapeDef;
     }
 
     Shape::~Shape()
     {
         // Shapes in Box3D are automatically deleted when the body is.
-        // m_box3DShapePtr.reset();
-        // m_box3DShapePtr = nullptr;
-        
-        if (B3_IS_NON_NULL(m_shapeId))
+        if (b3Shape_IsValid(m_shapeId))
         {
             b3Shape_SetUserData(m_shapeId, nullptr);
         }
         m_attachedBody = b3_nullBodyId;
+        m_colliderConfiguration.reset();
+        m_shapeConfiguration.reset();
     }
 
     b3ShapeId Shape::GetShapeId() const
@@ -351,7 +335,7 @@ namespace B3
 
     bool Shape::IsTrigger() const
     {
-        if (B3_IS_NON_NULL(m_shapeId))
+        if (b3Shape_IsValid(m_shapeId))
         {
             return b3Shape_IsSensor(m_shapeId);
         }
@@ -360,14 +344,13 @@ namespace B3
 
     void Shape::AttachedToActor(void* attachedBody)
     {
-        // TODO: take the body and create the actual shape here with the known Id.
         // This is where the shape is actually created
         b3BodyId* bodyId = static_cast<b3BodyId*>(attachedBody);
         if (b3Body_IsValid(*bodyId))
         {
             m_attachedBody = *bodyId;
 
-            // m_shapeId = Utils::CreateBox3DShapeFromConfig();
+            m_shapeId = Utils::CreateBox3DShapeFromConfig(*m_colliderConfiguration, *m_shapeConfiguration, m_shapeDef, m_attachedBody);
         }
     }
 
