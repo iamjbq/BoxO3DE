@@ -59,7 +59,7 @@ namespace B3
         : m_collisionLayer(colliderConfiguration.m_collisionLayer)
     {
         m_shapeConfiguration = shapeConfiguration.Clone();
-        m_colliderConfiguration = AZStd::make_shared<Physics::ColliderConfiguration>(m_shapeConfiguration);
+        m_colliderConfiguration = AZStd::make_shared<Physics::ColliderConfiguration>(colliderConfiguration);
         m_tag = AZ::Crc32(colliderConfiguration.m_tag);
         
         Physics::CollisionRequestBus::BroadcastResult(m_collisionGroup, &Physics::CollisionRequests::GetCollisionGroupById, colliderConfiguration.m_collisionGroupId);
@@ -342,7 +342,8 @@ namespace B3
         return false;
     }
 
-    void Shape::AttachedToActor(void* attachedBody)
+    void Shape::
+    AttachedToActor(void* attachedBody)
     {
         // This is where the shape is actually created
         b3BodyId* bodyId = static_cast<b3BodyId*>(attachedBody);
