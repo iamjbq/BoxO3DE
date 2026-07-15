@@ -1,6 +1,7 @@
 #include <Tools/EditorComponentDescriptors.h>
 #include <Tools/BoxO3DEEditorSystemComponent.h>
 #include <Tools/System/Box3DEditorSettingsRegistryManager.h>
+#include <Tools/EditorStaticRigidBodyComponent.h>
 
 namespace B3
 {
@@ -9,7 +10,8 @@ namespace B3
         AZStd::list<AZ::ComponentDescriptor*> descriptors =
         {
             BoxO3DEEditorSystemComponent::CreateDescriptor(),
-            BoxO3DESystemComponent::CreateDescriptor()
+            BoxO3DESystemComponent::CreateDescriptor(),
+            EditorStaticRigidBodyComponent::CreateDescriptor()
         };
 
         return descriptors;

@@ -5,6 +5,7 @@
 #include <BoxO3DE/Utils.h>
 #include <Clients/Shape.h>
 #include <Clients/RigidBody.h>
+#include <Clients/StaticRigidBody.h>
 
 #include <AzCore/Console/IConsole.h>
 #include <AzCore/Debug/ProfilerBus.h>
@@ -241,6 +242,7 @@ namespace B3
         m_currentDeltaTime = deltatime;
 
         b3World_Step(m_worldId, deltatime, m_subStepCount);
+        AZ_Printf("StartSimulation", "World is simulating")
     }
 
     void Box3DScene::FinishSimulation()
@@ -251,6 +253,8 @@ namespace B3
         {
             return;
         }
+        
+        AZ_Printf("StartSimulation", "World is done simulating")
 
         // {
         //     AZ_PROFILE_SCOPE(Physics, "Box3DScene::CheckResults");
@@ -444,8 +448,8 @@ namespace B3
         }
         else if (azrtti_istypeof<AzPhysics::StaticRigidBodyConfiguration>(simulatedBodyConfig))
         {
-            // newBody = Internal::CreateSimulatedBody<StaticRigidBody, AzPhysics::StaticRigidBodyConfiguration>(
-            //     azdynamic_cast<const AzPhysics::StaticRigidBodyConfiguration*>(simulatedBodyConfig), newBodyCrc, m_worldId);
+            newBody = Internal::CreateSimulatedBody<StaticRigidBody, AzPhysics::StaticRigidBodyConfiguration>(
+                azdynamic_cast<const AzPhysics::StaticRigidBodyConfiguration*>(simulatedBodyConfig), newBodyCrc, m_worldId);
         }
         else if (azrtti_istypeof<Physics::CharacterConfiguration>(simulatedBodyConfig))
         {

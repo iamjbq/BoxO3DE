@@ -7,6 +7,8 @@ set(FILES
     Include/BoxO3DE/Utils.h
     Include/BoxO3DE/Utils.inl
     Include/BoxO3DE/NativeTypeIdentifiers.h
+    Include/BoxO3DE/ColliderComponentBus.h
+    Include/BoxO3DE/ColliderShapeBus.h
     Include/BoxO3DE/Material/Box3DMaterial.h
     Include/BoxO3DE/Material/Box3DMaterialConfiguration.h
     
@@ -28,6 +30,8 @@ set(FILES
     Source/Clients/RigidBody.h
     Source/Clients/StaticRigidBody.cpp
     Source/Clients/StaticRigidBody.h
+    Source/Clients/StaticRigidBodyComponent.cpp
+    Source/Clients/StaticRigidBodyComponent.h
         
     Source/Configuration/Box3DConfiguration.cpp
     Source/Configuration/Box3DSettingsRegistryManager.cpp

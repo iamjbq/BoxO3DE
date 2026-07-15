@@ -10,6 +10,8 @@ set(FILES
     Source/Tools/BoxO3DEEditorSystemComponent.h
     Source/Tools/EditorComponentDescriptors.cpp
     Source/Tools/EditorComponentDescriptors.h
+    Source/Tools/EditorStaticRigidBodyComponent.cpp
+    Source/Tools/EditorStaticRigidBodyComponent.h
     
     Source/Tools/System/EditorWindow.ui
     Source/Tools/System/EditorWindow.cpp
