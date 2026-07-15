@@ -242,7 +242,6 @@ namespace B3
         m_currentDeltaTime = deltatime;
 
         b3World_Step(m_worldId, deltatime, m_subStepCount);
-        AZ_Printf("StartSimulation", "World is simulating")
     }
 
     void Box3DScene::FinishSimulation()
@@ -253,8 +252,6 @@ namespace B3
         {
             return;
         }
-        
-        AZ_Printf("StartSimulation", "World is done simulating")
 
         // {
         //     AZ_PROFILE_SCOPE(Physics, "Box3DScene::CheckResults");
@@ -813,50 +810,41 @@ namespace B3
 
     void Box3DScene::EnableSimulationOfBodyInternal(AzPhysics::SimulatedBody& body)
     {
-        AZ_UNUSED(body);
-        //character controller is a special actor and only needs the m_simulating flag set,
-        // if (!azrtti_istypeof<PhysX::CharacterController>(body) &&
-        //     !azrtti_istypeof<PhysX::Ragdoll>(body) &&
-        //     !azrtti_istypeof<PhysX::ArticulationLink>(body))
-        // {
-        //     auto pxActor = static_cast<physx::PxActor*>(body.GetNativePointer());
-        //     AZ_Assert(pxActor, "Simulated Body doesn't have a valid physx actor");
-        //
-        //     {
-        //         PHYSX_SCENE_WRITE_LOCK(m_pxScene);
-        //         m_pxScene->addActor(*pxActor);
-        //     }
-        //
-        //     if (azrtti_istypeof<PhysX::RigidBody>(body))
-        //     {
-        //         auto rigidBody = azdynamic_cast<PhysX::RigidBody*>(&body);
-        //         if (rigidBody->ShouldStartAsleep())
-        //         {
-        //             rigidBody->ForceAsleep();
-        //         }
-        //     }
-        // }
-        //
-        // body.m_simulating = true;
+        // TOOD: maybe different?
+        // character controller is a special actor and only needs the m_simulating flag set 
+         // if (!azrtti_istypeof<PhysX::CharacterController>(body) &&
+         //     !azrtti_istypeof<PhysX::Ragdoll>(body) &&
+         //     !azrtti_istypeof<PhysX::ArticulationLink>(body))
+         {
+             auto bodyId = static_cast<b3BodyId*>(body.GetNativePointer());
+             AZ_Assert(b3Body_IsValid(*bodyId), "Simulated Body doesn't have a valid Body ID");
+        
+             {
+                 b3Body_Enable(*bodyId);
+             }
+             // We don't need to force asleep here since the body def starts it asleep whenever it's enabled
+         }
+        
+         body.m_simulating = true;
     }
 
     void Box3DScene::DisableSimulationOfBodyInternal(AzPhysics::SimulatedBody& body)
     {
-        AZ_UNUSED(body);
-        //character controller is a special actor and only needs the m_simulating flag set,
-        // if (!azrtti_istypeof<PhysX::CharacterController>(body) &&
-        //     !azrtti_istypeof<PhysX::Ragdoll>(body) &&
-        //     !azrtti_istypeof<PhysX::ArticulationLink>(body))
-        // {
-        //     auto pxActor = static_cast<physx::PxActor*>(body.GetNativePointer());
-        //     AZ_Assert(pxActor, "Simulated Body doesn't have a valid physx actor");
-        //
-        //     {
-        //         PHYSX_SCENE_WRITE_LOCK(m_pxScene);
-        //         m_pxScene->removeActor(*pxActor);
-        //     }
-        // }
-        // body.m_simulating = false;
+        // TODO: again, maybe not valid for Box3D?
+        // character controller is a special actor and only needs the m_simulating flag set,
+         // if (!azrtti_istypeof<PhysX::CharacterController>(body) &&
+         //     !azrtti_istypeof<PhysX::Ragdoll>(body) &&
+         //     !azrtti_istypeof<PhysX::ArticulationLink>(body))
+         {
+            auto bodyId = static_cast<b3BodyId*>(body.GetNativePointer());
+            AZ_Assert(b3Body_IsValid(*bodyId), "Simulated Body doesn't have a valid Body ID");
+        
+            {
+                b3Body_Disable(*bodyId);
+            }
+         }
+        
+        body.m_simulating = false;
     }
 
     void Box3DScene::FlushQueuedEvents()

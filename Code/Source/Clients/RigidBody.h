@@ -133,6 +133,7 @@ namespace B3
         void SetInertia(const AZ::Matrix3x3& inertia);
 
         b3BodyId m_bodyId = b3_nullBodyId;
+        AZStd::shared_ptr<b3BodyId> m_bodyIdPtr;
         b3WorldId m_worldId = b3_nullWorldId;
         b3BodyDef m_bodyDef;
         AZStd::vector<AZStd::shared_ptr<B3::Shape>> m_shapes;

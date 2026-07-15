@@ -104,6 +104,7 @@ namespace B3
             b3DestroyBody(m_bodyId); // Shapes and joints are automatically destroyed with the body
         }
         m_shapes.clear();
+        m_bodyIdPtr.reset();
     }
 
     void RigidBody::CreateBox3DBody(const AzPhysics::RigidBodyConfiguration& configuration)
@@ -142,9 +143,15 @@ namespace B3
         m_bodyDef = newBodyDef; // Not sure if this should be cached
         
         m_bodyId = b3CreateBody(m_worldId, &m_bodyDef);
+        m_bodyIdPtr = AZStd::make_shared<b3BodyId>(m_bodyId);
 
         if (b3Body_IsValid(m_bodyId))
         {
+            if (configuration.m_startSimulationEnabled)
+            {
+                m_simulating = true;
+            }
+            
             m_bodyUserData = BodyData(m_bodyId);
             m_bodyUserData.SetRigidBody(this);
             m_bodyUserData.SetEntityId(configuration.m_entityId);
@@ -154,6 +161,8 @@ namespace B3
             {
                 SetUserData(configuration.m_customUserData);
             }
+            
+            AZ_Printf("CreateBox3DBody", "Rigid body creation was successful!")
         }
     }
 
@@ -746,7 +755,7 @@ namespace B3
 
     void* RigidBody::GetNativePointer() const
     {
-        return nullptr;
+        return m_bodyIdPtr.get();
     }
 
     // Not in API but needed to support PhysicsComponentBus
