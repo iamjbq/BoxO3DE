@@ -74,8 +74,6 @@ namespace B3
             {
                 SetUserData(configuration.m_customUserData);
             }
-            
-            AZ_Printf("CreateBox3DBody", "Static body creation was successful!")
         }
     }
 

@@ -23,6 +23,9 @@
 
 namespace B3
 {
+    AZ_CVAR(bool, box3d_multithreadedSimulation, true, nullptr, AZ::ConsoleFunctorFlags::NeedsReload, "Multithreaded world simulation. "
+        "Only corresponds to internal Box3D system");
+    
     AZ_CVAR_EXTERNED(bool, box3d_batchTransformSync);
 
     AZ_CVAR(bool, box3d_parallelTransformSync, true, nullptr, AZ::ConsoleFunctorFlags::Null, "Multithreaded transform update for rigid bodies. "
@@ -194,6 +197,8 @@ namespace B3
             worldDef.restitutionThreshold = m_config.m_bounceThresholdVelocity;
             worldDef.userData = this;
             worldDef.capacity = worldCapacity;
+            if (box3d_multithreadedSimulation)
+                worldDef.workerCount = AZStd::thread::hardware_concurrency(); // Internally capped at 32
             
             m_worldId = b3CreateWorld(&worldDef);
             AZ_Assert(b3World_IsValid(m_worldId), "B3::Box3DScene world creation failed");

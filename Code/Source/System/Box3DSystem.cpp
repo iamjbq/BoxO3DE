@@ -10,6 +10,8 @@
 #include <AzCore/Memory/SystemAllocator.h>
 #include <AzCore/PlatformId/PlatformId.h>
 #include <AzCore/std/smart_ptr/unique_ptr.h>
+#include <AzCore/std/parallel/thread.h>
+
 
 // only enable Box3D timestep warning when not running debug or in Release
 #if !defined(DEBUG) && !defined(RELEASE)
@@ -106,7 +108,7 @@ namespace B3
     static void* Box3DAllocateFunction(int32_t size, int32_t alignment)
     {
         void* ptr = AZ::AllocatorInstance<Box3DAllocator>::Get().Allocate(size, alignment, 0, "Box3D");
-        // AZ_Assert((reinterpret_cast<size_t>(ptr) & 15) == 0, "Box3D requires 16-byte aligned memory allocations.");
+        AZ_Assert((reinterpret_cast<size_t>(ptr) & 63) == 0, "Box3D requires 64-byte aligned memory allocations.");
         return ptr;
     }
     
