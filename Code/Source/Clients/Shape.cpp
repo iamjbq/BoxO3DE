@@ -90,8 +90,8 @@ namespace B3
         newShapeDef.explosionScale = 1.0f;
         newShapeDef.filter = collisionFilter;
         newShapeDef.isSensor = colliderConfiguration.m_isTrigger;
-        newShapeDef.enableContactEvents = true;
-        newShapeDef.enableContactEvents = true;
+        newShapeDef.enableContactEvents = true; // TODO: future configuration on component
+        newShapeDef.enableSensorEvents = true;
         newShapeDef.enableHitEvents = true;
         newShapeDef.updateBodyMass = true;
         
@@ -221,11 +221,9 @@ namespace B3
     void Shape::SetCollisionLayer(const AzPhysics::CollisionLayer& layer)
     {
         m_collisionLayer = layer;
-
-        // physx::PxFilterData filterData = m_box3DShapePtr->getSimulationFilterData();
-        // Collision::SetLayer(layer, filterData);
-        // m_box3DShapePtr->setSimulationFilterData(filterData);
-        // m_box3DShapePtr->setQueryFilterData(filterData);
+        b3Filter filter = b3Shape_GetFilter(m_shapeId);
+        filter.categoryBits = layer.GetMask();
+        b3Shape_SetFilter(m_shapeId, filter, true);
     }
 
     AzPhysics::CollisionLayer Shape::GetCollisionLayer() const
@@ -236,11 +234,9 @@ namespace B3
     void Shape::SetCollisionGroup(const AzPhysics::CollisionGroup& group)
     {
         m_collisionGroup = group;
-        
-        // physx::PxFilterData filterData = m_box3DShapePtr->getSimulationFilterData();
-        // Collision::SetGroup(m_collisionGroup, filterData);
-        // m_box3DShapePtr->setSimulationFilterData(filterData);
-        // m_box3DShapePtr->setQueryFilterData(filterData);
+        b3Filter filter = b3Shape_GetFilter(m_shapeId);
+        filter.maskBits = group.GetMask();
+        b3Shape_SetFilter(m_shapeId, filter, true);
     }
 
     AzPhysics::CollisionGroup Shape::GetCollisionGroup() const
@@ -255,7 +251,38 @@ namespace B3
 
     void Shape::SetLocalPose(const AZ::Vector3& offset, const AZ::Quaternion& rotation)
     {
-        AZ_UNUSED_2(offset, rotation);
+        switch (b3Shape_GetType(m_shapeId))
+        {
+        case b3ShapeType::b3_sphereShape:
+            {
+                b3Sphere sphere = b3Shape_GetSphere(m_shapeId);
+                sphere.center = Box3DMathConvert(offset); // rotation doesn't change a sphere
+                b3Shape_SetSphere(m_shapeId, &sphere);
+                break;
+            }
+        case b3ShapeType::b3_capsuleShape:
+            {
+                b3Capsule capsule = b3Shape_GetCapsule(m_shapeId);
+                float halfHeight = b3Distance(capsule.center1, capsule.center2) * 0.5f;
+                AZ::Vector3 axis = rotation.TransformVector(AZ::Vector3::CreateAxisZ());
+                capsule.center1 = Box3DMathConvert(offset - axis * halfHeight);
+                capsule.center2 = Box3DMathConvert(offset + axis * halfHeight);
+                b3Shape_SetCapsule(m_shapeId, &capsule);
+                break;
+            }
+        case b3ShapeType::b3_hullShape:
+            {
+                b3HullData* hull = b3CloneAndTransformHull(b3Shape_GetHull(m_shapeId), Box3DMathConvert(offset, rotation), b3Vec3_one);
+                b3Shape_SetHull(m_shapeId, hull);
+                break;
+            }
+        default:
+            {
+                AZ_Warning("Physics::Shape", false, "Cannot set local pose. Unknown or unsupported shape type.");
+                break;
+            }
+        }
+        
         // physx::PxTransform pxShapeTransform = PxMathConvert(offset, rotation);
         // AZ_Warning("Physics::Shape", m_box3DShapePtr->isExclusive(), "Non-exclusive shapes are not mutable after they're attached to a body.");
         // if (m_box3DShapePtr->getGeometry().getType() == physx::PxGeometryType::eCAPSULE)
@@ -268,6 +295,31 @@ namespace B3
 
     AZStd::pair<AZ::Vector3, AZ::Quaternion> Shape::GetLocalPose() const
     {
+        switch (b3Shape_GetType(m_shapeId))
+        {
+        case b3ShapeType::b3_sphereShape:
+            {
+                return Box3DMathConvert(b3Shape_GetSphere(m_shapeId).center);
+            }
+        case b3ShapeType::b3_capsuleShape:
+            {
+                b3Capsule capsule = b3Shape_GetCapsule(m_shapeId);
+                AZ::Vector3 center = Box3DMathConvert(capsule.center1 + capsule.center2) * 0.5f;
+                AZ::Vector3 axis = Box3DMathConvert(capsule.center1 - capsule.center2).GetNormalized();
+                return { center, AZ::Quaternion::CreateShortestArc(AZ::Vector3::CreateAxisZ(), axis) };
+            }
+        case b3ShapeType::b3_hullShape:
+            {
+                // const b3HullData* hull = b3Shape_GetHull(m_shapeId);
+                // TODO: not sure yet how to get it
+                return { AZ::Vector3::CreateZero(), AZ::Quaternion::CreateIdentity() };
+            }
+        default:
+            {
+                AZ_Warning("Physics::Shape", false, "Cannot set local pose. Unknown or unsupported shape type.");
+                return { AZ::Vector3::CreateZero(), AZ::Quaternion::CreateIdentity() };
+            }
+        }
         // physx::PxTransform pose = m_box3DShapePtr->getLocalPose();
         // if (m_box3DShapePtr->getGeometry().getType() == physx::PxGeometryType::eCAPSULE)
         // {
@@ -275,7 +327,6 @@ namespace B3
         //     pose.q *= PxTolyRotation;
         // }
         // return { PxMathConvert(pose.p), PxMathConvert(pose.q) };
-        return { AZ::Vector3::CreateZero(), AZ::Quaternion::CreateIdentity() };
     }
 
     float Shape::GetRestOffset() const
@@ -456,15 +507,6 @@ namespace B3
         // TODO: Some way to convert to lcoal
         return Box3DMathConvert(b3Shape_GetAABB(m_shapeId));
     }
-
-    // physx::PxScene* Shape::GetScene() const
-    // {
-    //     if (b3Body_IsValid(m_attachedBody))
-    //     {
-    //         return m_attachedBody->getScene();
-    //     }
-    //     return nullptr;
-    // }
 
     AZStd::shared_ptr<Physics::ShapeConfiguration> Shape::GetShapeConfiguration() const
     {

@@ -148,6 +148,7 @@ namespace B3
             m_bodyUserData = BodyData(m_bodyId);
             m_bodyUserData.SetRigidBody(this);
             m_bodyUserData.SetEntityId(configuration.m_entityId);
+            m_debugName = configuration.m_debugName;
 
             if (configuration.m_customUserData)
             {
@@ -171,13 +172,7 @@ namespace B3
             return;
         }
 
-        // if (!box3DShape->GetPxShape())
-        // {
-        //     AZ_Error("Box3D Rigid Body", false, "Trying to add a shape with no valid PxShape. Name: %s", GetName().c_str());
-        //     return;
-        // }
-
-        if (box3DShape->GetShapeConfiguration()->GetShapeType() == Physics::ShapeType::TriangleMesh && !IsKinematic())
+        if (box3DShape->GetShapeConfiguration()->GetShapeType() == Physics::ShapeType::TriangleMesh || !IsKinematic())
         {
             AZ_Error("Box3D", false, "Cannot use triangle mesh geometry on a dynamic object: %s", GetName().c_str());
             return;
@@ -850,16 +845,16 @@ namespace B3
 
     void RigidBody::SetName(const AZStd::string& entityName)
     {
-        m_name = entityName;
+        m_debugName = entityName;
 
         if(b3Body_IsValid(m_bodyId))
         {
-            b3Body_SetName(m_bodyId, m_name.c_str());
+            b3Body_SetName(m_bodyId, m_debugName.c_str());
         }
     }
 
     const AZStd::string& RigidBody::GetName() const
     {
-        return m_name;
+        return m_debugName;
     }
 }

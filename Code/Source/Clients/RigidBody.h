@@ -136,7 +136,7 @@ namespace B3
         b3WorldId m_worldId = b3_nullWorldId;
         b3BodyDef m_bodyDef;
         AZStd::vector<AZStd::shared_ptr<B3::Shape>> m_shapes;
-        AZStd::string m_name;
+        AZStd::string m_debugName;
         B3::BodyData m_bodyUserData;
         bool m_startAsleep = false;
     };

@@ -26,6 +26,8 @@ set(FILES
     Source/Clients/Shape.h
     Source/Clients/RigidBody.cpp
     Source/Clients/RigidBody.h
+    Source/Clients/StaticRigidBody.cpp
+    Source/Clients/StaticRigidBody.h
         
     Source/Configuration/Box3DConfiguration.cpp
     Source/Configuration/Box3DSettingsRegistryManager.cpp
