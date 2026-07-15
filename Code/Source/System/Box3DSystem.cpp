@@ -85,6 +85,36 @@ namespace B3
         AZ::ConsoleFunctorFlags::DontReplicate, "How many seconds to wait before each batch of performance capture.");
     // cvars //
     
+    // Callback for asserts, connect this to your own assert handler if you have one
+    static int Box3DAssertFunction(const char* condition, const char* fileName, int lineNumber)
+    {
+        AZ_Assert(false, "Box3D - %s:%i: %s", fileName, lineNumber, (condition != nullptr? condition : ""))
+
+        // Breakpoint
+        return 0;
+    };
+    
+    // Callback for traces, connect this to your own trace function if you have one
+    static void Box3DLogFunction(const char* message)
+    {
+        AZ_Trace("Jolt", message)
+    }
+    
+    //! System allocator to be used for all Box3D gem persistent allocations.
+    AZ_CHILD_ALLOCATOR_WITH_NAME(Box3DAllocator, "Box3DAllocator", "{32D5E884-E194-4DF5-B4D5-E3852BBF578D}", AZ::SystemAllocator);
+    
+    static void* Box3DAllocateFunction(int32_t size, int32_t alignment)
+    {
+        void* ptr = AZ::AllocatorInstance<Box3DAllocator>::Get().Allocate(size, alignment, 0, "Box3D");
+        // AZ_Assert((reinterpret_cast<size_t>(ptr) & 15) == 0, "Box3D requires 16-byte aligned memory allocations.");
+        return ptr;
+    }
+    
+    static void Box3DFreeFunction(void* mem)
+    {
+        AZ::AllocatorInstance<Box3DAllocator>::Get().DeAllocate(mem);
+    }
+    
     Box3DSystem::Box3DSystem(AZStd::unique_ptr<Box3DSettingsRegistryManager> registryManager)
         : m_registryManager(AZStd::move(registryManager))
         , m_sceneInterface(this)
@@ -115,6 +145,10 @@ namespace B3
         // m_scratchBufferAddress = AZ::AllocatorInstance<PhysXAllocator>::Get().allocate(m_scratchBufferSize, 16);
         // AZ_Assert((reinterpret_cast<size_t>(m_scratchBufferAddress) & 15) == 0, "PhysX requires 16-byte aligned memory allocations.");
 
+        b3SetAssertFcn(&Box3DAssertFunction);
+        b3SetLogFcn(&Box3DLogFunction);
+        b3SetAllocator(&Box3DAllocateFunction, &Box3DFreeFunction);
+        
         m_state = State::Initialized;
         m_initializeEvent.Signal(&m_systemConfig);
     }
