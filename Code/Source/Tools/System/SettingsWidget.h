@@ -55,4 +55,4 @@ namespace B3
             // B3::Debug::DebugDisplayData m_debugDisplayData;
         };
     }
-}
+} // B3

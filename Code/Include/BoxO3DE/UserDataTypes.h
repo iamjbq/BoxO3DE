@@ -52,7 +52,7 @@ namespace B3
         bool IsValid() const;
 
     private:
-        using BodyIdUniquePtr = AZStd::unique_ptr<b3BodyId, AZStd::function<void(b3BodyId*)>>;
+        // using BodyIdUniquePtr = AZStd::unique_ptr<b3BodyId, AZStd::function<void(b3BodyId*)>>;
 
         ///This is an arbitary value used to verify the cast from void* userdata pointer on a pxActor to ActorData
         ///is safe. If m_sanity does not have this value, then it is not safe to use the casted pointer.
@@ -60,7 +60,7 @@ namespace B3
         static constexpr AZ::u32 SanityValue = 0xba5eba11;
 
         AZ::u32 m_sanity = SanityValue;
-        BodyIdUniquePtr m_bodyIdPtr;
+        // BodyIdUniquePtr m_bodyIdPtr;
         b3BodyId m_bodyId = b3_nullBodyId;
 
         struct Payload

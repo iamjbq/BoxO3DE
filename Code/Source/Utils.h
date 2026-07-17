@@ -10,7 +10,13 @@
 #include <AzFramework/Physics/ShapeConfiguration.h>
 #include <AzCore/std/optional.h>
 
-#include <box3d/box3d.h>
+// #include <box3d/box3d.h>
+
+extern "C" {
+struct b3ShapeId;
+struct b3ShapeDef;
+struct b3BodyId;
+}
 
 namespace AzPhysics
 {

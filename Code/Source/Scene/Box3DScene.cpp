@@ -493,10 +493,10 @@ namespace B3
             m_simulatedBodyAddedEvent.Signal(m_sceneHandle, newBodyHandle);
 
             // Enable simulation by default (not signaling OnSimulationBodySimulationEnabled event)
-            if (simulatedBodyConfig->m_startSimulationEnabled)
-            {
+            // if (simulatedBodyConfig->m_startSimulationEnabled)
+            // {
                 EnableSimulationOfBodyInternal(*newBody);
-            }
+            // }
 
             return newBodyHandle;
         }
@@ -817,37 +817,40 @@ namespace B3
     {
         // TOOD: maybe different?
         // character controller is a special actor and only needs the m_simulating flag set 
-         // if (!azrtti_istypeof<PhysX::CharacterController>(body) &&
-         //     !azrtti_istypeof<PhysX::Ragdoll>(body) &&
-         //     !azrtti_istypeof<PhysX::ArticulationLink>(body))
-         {
-             auto bodyId = static_cast<b3BodyId*>(body.GetNativePointer());
-             AZ_Assert(b3Body_IsValid(*bodyId), "Simulated Body doesn't have a valid Body ID");
+        // if (!azrtti_istypeof<PhysX::CharacterController>(body) &&
+        //     !azrtti_istypeof<PhysX::Ragdoll>(body) &&
+        //     !azrtti_istypeof<PhysX::ArticulationLink>(body))
+        {
+            auto bodyId = static_cast<b3BodyId*>(body.GetNativePointer());
+            AZ_Assert(b3Body_IsValid(*bodyId), "Simulated Body doesn't have a valid Body ID");
+             
+            b3Body_Enable(*bodyId);
+             
+            // We don't need to force asleep here since the body def starts it asleep whenever it's enabled
+            if (b3Body_IsEnabled(*bodyId))
+            {
+                auto pos = b3Body_GetPosition(*bodyId);
+                AZ_Printf("EnableSimulationOfBody", "Body position: %.2f, %.2f, %.2f", pos.x, pos.y, pos.z);
+            }
+        }
         
-             {
-                 b3Body_Enable(*bodyId);
-             }
-             // We don't need to force asleep here since the body def starts it asleep whenever it's enabled
-         }
         
-         body.m_simulating = true;
+        body.m_simulating = true;
     }
 
     void Box3DScene::DisableSimulationOfBodyInternal(AzPhysics::SimulatedBody& body)
     {
         // TODO: again, maybe not valid for Box3D?
         // character controller is a special actor and only needs the m_simulating flag set,
-         // if (!azrtti_istypeof<PhysX::CharacterController>(body) &&
-         //     !azrtti_istypeof<PhysX::Ragdoll>(body) &&
-         //     !azrtti_istypeof<PhysX::ArticulationLink>(body))
-         {
+        // if (!azrtti_istypeof<PhysX::CharacterController>(body) &&
+        //     !azrtti_istypeof<PhysX::Ragdoll>(body) &&
+        //     !azrtti_istypeof<PhysX::ArticulationLink>(body))
+        {
             auto bodyId = static_cast<b3BodyId*>(body.GetNativePointer());
-            AZ_Assert(b3Body_IsValid(*bodyId), "Simulated Body doesn't have a valid Body ID");
-        
-            {
-                b3Body_Disable(*bodyId);
-            }
-         }
+            AZ_Assert(b3Body_IsValid(*bodyId), "Simulated Body doesn't have a valid Body ID")
+             
+            b3Body_Disable(*bodyId);
+        }
         
         body.m_simulating = false;
     }

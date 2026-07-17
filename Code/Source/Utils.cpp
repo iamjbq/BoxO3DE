@@ -28,6 +28,8 @@
 #include <BoxO3DE/MathConversions.h>
 #include <System/Box3DSystem.h>
 
+#include <box3d/box3d.h>
+
 namespace B3
 {
     namespace Utils

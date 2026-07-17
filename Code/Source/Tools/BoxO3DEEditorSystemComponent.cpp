@@ -1,4 +1,3 @@
-
 #include <Tools/BoxO3DEEditorSystemComponent.h>
 
 #include <AzCore/Interface/Interface.h>
@@ -9,10 +8,12 @@
 #include <AzFramework/Physics/Collision/CollisionEvents.h>
 #include <AzFramework/Physics/Common/PhysicsSimulatedBody.h>
 
+#include <IEditor.h>
+
+#include <BoxO3DE/BoxO3DETypeIds.h>
 #include <Tools/System/EditorWindow.h>
 #include <Tools/System/PropertyTypes.h>
 #include <Tools/System/Box3DEditorMaterialAsset.h>
-#include <BoxO3DE/BoxO3DETypeIds.h>
 #include <System/Box3DSystem.h>
 
 namespace B3
@@ -87,7 +88,7 @@ namespace B3
             m_editorWorldSceneHandle = physicsSystem->AddScene(editorWorldConfiguration);
         }
 
-        B3::Editor::RegisterPropertyTypes(); // for configuration widget
+        B3::Editor::RegisterPropertyTypes(); // for registering custom UIs and property handlers
 
         AzToolsFramework::EditorEvents::Bus::Handler::BusConnect();
         AzToolsFramework::EditorEntityContextNotificationBus::Handler::BusConnect();

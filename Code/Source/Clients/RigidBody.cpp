@@ -117,7 +117,7 @@ namespace B3
         
         b3BodyDef newBodyDef = b3DefaultBodyDef();
         
-        configuration.m_kinematic ? newBodyDef.type = b3BodyType::b3_kinematicBody : b3BodyType::b3_dynamicBody;
+        configuration.m_kinematic ? newBodyDef.type = b3BodyType::b3_kinematicBody : newBodyDef.type = b3BodyType::b3_dynamicBody;
         newBodyDef.position = Box3DMathConvert(configuration.m_position);
         newBodyDef.rotation = Box3DMathConvert(configuration.m_orientation.GetNormalized());
         newBodyDef.linearVelocity = Box3DMathConvert(configuration.m_initialLinearVelocity);

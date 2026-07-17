@@ -5,31 +5,33 @@ namespace B3
 {
     inline BodyData::BodyData(b3BodyId bodyId)
     {
-        auto nullUserData = [](b3BodyId* bodyIdToSet)
-        {
-            // making sure userData never dangles
-            b3Body_SetUserData(*bodyIdToSet, nullptr);
-        };
+        // auto nullUserData = [](b3BodyId* bodyIdToSet)
+        // {
+        //     // making sure userData never dangles
+        //     b3Body_SetUserData(*bodyIdToSet, nullptr);
+        // };
 
-        m_bodyIdPtr = BodyIdUniquePtr(&bodyId, nullUserData);
+        // m_bodyIdPtr = BodyIdUniquePtr(&bodyId, nullUserData);
         m_bodyId = bodyId;
-        b3Body_SetUserData(bodyId, this);
+        b3Body_SetUserData(m_bodyId, this);
     }
 
     inline BodyData::BodyData(BodyData&& other)
         : m_sanity(other.m_sanity)
-        , m_bodyIdPtr(AZStd::move(other.m_bodyIdPtr))
+        // , m_bodyIdPtr(AZStd::move(other.m_bodyIdPtr))
         , m_payload(AZStd::move(other.m_payload))
+        , m_bodyId(other.m_bodyId)
     {
-        b3Body_SetUserData(*m_bodyIdPtr, this);
+        b3Body_SetUserData(m_bodyId, this);
     }
 
     inline BodyData& BodyData::operator=(BodyData&& other)
     {
         m_sanity = other.m_sanity;
-        m_bodyIdPtr = AZStd::move(other.m_bodyIdPtr);
-        b3Body_SetUserData(*m_bodyIdPtr, this);
         m_payload = AZStd::move(other.m_payload);
+        m_bodyId = other.m_bodyId;
+        // m_bodyIdPtr = AZStd::move(other.m_bodyIdPtr);
+        b3Body_SetUserData(m_bodyId, this);
         return *this;
     }
 
@@ -40,7 +42,8 @@ namespace B3
 
     inline void BodyData::Invalidate()
     {
-        m_bodyIdPtr = nullptr;
+        b3Body_SetUserData(m_bodyId, nullptr);
+        m_bodyId = b3_nullBodyId;
         m_payload = Payload();
     }
 

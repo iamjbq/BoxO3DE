@@ -32,6 +32,8 @@ set(FILES
     Source/Clients/StaticRigidBody.h
     Source/Clients/StaticRigidBodyComponent.cpp
     Source/Clients/StaticRigidBodyComponent.h
+    Source/Clients/RigidBodyComponent.cpp
+    Source/Clients/RigidBodyComponent.h
         
     Source/Configuration/Box3DConfiguration.cpp
     Source/Configuration/Box3DSettingsRegistryManager.cpp

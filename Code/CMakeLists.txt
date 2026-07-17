@@ -76,8 +76,8 @@ ly_add_target(
             AZ::AzFramework
             AZ::AzToolsFramework
             Legacy::CryCommon
-        PRIVATE
             box3d::box3d
+        PRIVATE
             Gem::LmbrCentral.API
 )
 

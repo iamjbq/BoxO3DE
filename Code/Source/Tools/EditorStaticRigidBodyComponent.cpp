@@ -1,6 +1,5 @@
 
 #include <AzCore/Serialization/EditContext.h>
-
 #include <AzFramework/Physics/NameConstants.h>
 
 #include <Tools/EditorStaticRigidBodyComponent.h>
