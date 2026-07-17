@@ -9,6 +9,7 @@ set(FILES
     Include/BoxO3DE/NativeTypeIdentifiers.h
     Include/BoxO3DE/ColliderComponentBus.h
     Include/BoxO3DE/ColliderShapeBus.h
+    Include/BoxO3DE/EditorColliderComponentRequestBus.h
     Include/BoxO3DE/Material/Box3DMaterial.h
     Include/BoxO3DE/Material/Box3DMaterialConfiguration.h
     
@@ -34,6 +35,14 @@ set(FILES
     Source/Clients/StaticRigidBodyComponent.h
     Source/Clients/RigidBodyComponent.cpp
     Source/Clients/RigidBodyComponent.h
+    Source/Clients/BaseColliderComponent.cpp
+    Source/Clients/BaseColliderComponent.h
+    Source/Clients/BoxColliderComponent.cpp
+    Source/Clients/BoxColliderComponent.h
+    Source/Clients/CapsuleColliderComponent.cpp
+    Source/Clients/CapsuleColliderComponent.h
+    Source/Clients/SphereColliderComponent.cpp
+    Source/Clients/SphereColliderComponent.h
         
     Source/Configuration/Box3DConfiguration.cpp
     Source/Configuration/Box3DSettingsRegistryManager.cpp

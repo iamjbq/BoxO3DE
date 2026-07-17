@@ -14,6 +14,8 @@ set(FILES
     Source/Tools/EditorStaticRigidBodyComponent.h
     Source/Tools/EditorRigidBodyComponent.cpp
     Source/Tools/EditorRigidBodyComponent.h
+    Source/Tools/EditorShapeColliderComponent.cpp
+    Source/Tools/EditorShapeColliderComponent.h
     
     Source/Tools/System/EditorWindow.ui
     Source/Tools/System/EditorWindow.h
@@ -48,4 +50,22 @@ set(FILES
     Source/Tools/System/KinematicDescriptionDialog.cpp
 #    Source/Tools/System/InertiaPropertyHandler.h
 #    Source/Tools/System/InertiaPropertyHandler.cpp
+    Source/Tools/System/ColliderComponentMode.cpp
+    Source/Tools/System/ColliderComponentMode.h
+    Source/Tools/System/ColliderComponentModeBus.h
+        
+    Source/Tools/System/ComponentModes/ColliderAssetScaleMode.cpp
+    Source/Tools/System/ComponentModes/ColliderAssetScaleMode.h
+    Source/Tools/System/ComponentModes/ColliderBoxMode.cpp
+    Source/Tools/System/ComponentModes/ColliderBoxMode.h
+    Source/Tools/System/ComponentModes/ColliderSphereMode.cpp
+    Source/Tools/System/ComponentModes/ColliderSphereMode.h
+    Source/Tools/System/ComponentModes/ColliderCapsuleMode.cpp
+    Source/Tools/System/ComponentModes/ColliderCapsuleMode.h
+    Source/Tools/System/ComponentModes/ColliderCylinderMode.cpp
+    Source/Tools/System/ComponentModes/ColliderCylinderMode.h
+    Source/Tools/System/ComponentModes/ColliderOffsetMode.cpp
+    Source/Tools/System/ComponentModes/ColliderOffsetMode.h
+    Source/Tools/System/ComponentModes/ColliderRotationMode.cpp
+    Source/Tools/System/ComponentModes/ColliderRotationMode.h
 )

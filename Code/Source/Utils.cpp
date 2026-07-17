@@ -34,6 +34,15 @@ namespace B3
 {
     namespace Utils
     {
+        bool IsPrimitiveShape(const Physics::ShapeConfiguration& shapeConfig)
+        {
+            const Physics::ShapeType shapeType = shapeConfig.GetShapeType();
+            return
+                // shapeType == Physics::ShapeType::Box || // TODO: box is a hull in Box3D
+                shapeType == Physics::ShapeType::Capsule ||
+                shapeType == Physics::ShapeType::Sphere;
+        }
+
         b3ShapeId CreateBox3DShapeFromConfig(
             const Physics::ColliderConfiguration& colliderConfiguration,
             const Physics::ShapeConfiguration& shapeConfiguration,
@@ -238,5 +247,100 @@ namespace B3
             }
             return newShapeId;
         }
+        
+        float GetTransformScale(AZ::EntityId entityId)
+        {
+            float transformScale = 1.0f;
+            AZ::TransformBus::EventResult(transformScale, entityId, &AZ::TransformBus::Events::GetWorldUniformScale);
+            return transformScale;
+        }
+
+        AZ::Vector3 GetNonUniformScale(AZ::EntityId entityId)
+        {
+            AZ::Vector3 nonUniformScale = AZ::Vector3::CreateOne();
+            AZ::NonUniformScaleRequestBus::EventResult(nonUniformScale, entityId, &AZ::NonUniformScaleRequests::GetScale);
+            return nonUniformScale;
+        }
+
+        AZ::Vector3 GetOverallScale(AZ::EntityId entityId)
+        {
+            return GetTransformScale(entityId) * GetNonUniformScale(entityId);
+        }
+        
+        // AZ::Aabb GetColliderAabb(const AZ::Transform& worldTransform,
+        //     bool hasNonUniformScale,
+        //     AZ::u8 subdivisionLevel,
+        //     const ::Physics::ShapeConfiguration& shapeConfiguration,
+        //     const ::Physics::ColliderConfiguration& colliderConfiguration)
+        // {
+        //     const AZ::Aabb worldPosAabb = AZ::Aabb::CreateFromPoint(worldTransform.GetTranslation());
+        //     physx::PxGeometryHolder geometryHolder;
+        //     bool isAssetShape = shapeConfiguration.GetShapeType() == Physics::ShapeType::PhysicsAsset;
+        //
+        //     if (!isAssetShape)
+        //     {
+        //         if (!hasNonUniformScale)
+        //         {
+        //             if (CreatePxGeometryFromConfig(shapeConfiguration, geometryHolder))
+        //             {
+        //                 return GetPxGeometryAabb(geometryHolder, worldTransform, colliderConfiguration);
+        //             }
+        //         }
+        //         else
+        //         {
+        //             auto convexPrimitive = Utils::CreateConvexFromPrimitive(colliderConfiguration, shapeConfiguration, subdivisionLevel, shapeConfiguration.m_scale);
+        //             if (convexPrimitive.has_value())
+        //             {
+        //                 if (CreatePxGeometryFromConfig(convexPrimitive.value(), geometryHolder))
+        //                 {
+        //                     Physics::ColliderConfiguration colliderConfigurationNoOffset = colliderConfiguration;
+        //                     colliderConfigurationNoOffset.m_rotation = AZ::Quaternion::CreateIdentity();
+        //                     colliderConfigurationNoOffset.m_position = AZ::Vector3::CreateZero();
+        //                     return GetPxGeometryAabb(geometryHolder, worldTransform, colliderConfigurationNoOffset);
+        //                 }
+        //             }
+        //         }
+        //         return worldPosAabb;
+        //     }
+        //     else
+        //     {
+        //         const Physics::PhysicsAssetShapeConfiguration& physicsAssetConfig =
+        //             static_cast<const Physics::PhysicsAssetShapeConfiguration&>(shapeConfiguration);
+        //
+        //         if (!physicsAssetConfig.m_asset.IsReady())
+        //         {
+        //             return worldPosAabb;
+        //         }
+        //
+        //         AzPhysics::ShapeColliderPairList colliderShapes;
+        //         GetColliderShapeConfigsFromAsset(physicsAssetConfig,
+        //             colliderConfiguration,
+        //             hasNonUniformScale,
+        //             subdivisionLevel,
+        //             colliderShapes);
+        //
+        //         if (colliderShapes.empty())
+        //         {
+        //             return worldPosAabb;
+        //         }
+        //
+        //         AZ::Aabb aabb = AZ::Aabb::CreateNull();
+        //         for (const auto& colliderShape : colliderShapes)
+        //         {
+        //             if (colliderShape.second &&
+        //                 CreatePxGeometryFromConfig(*colliderShape.second, geometryHolder))
+        //             {
+        //                 aabb.AddAabb(
+        //                     GetPxGeometryAabb(geometryHolder, worldTransform, *colliderShape.first)
+        //                 );
+        //             }
+        //             else
+        //             {
+        //                 return worldPosAabb;
+        //             }
+        //         }
+        //         return aabb;
+        //     }
+        // }
     }
 }
