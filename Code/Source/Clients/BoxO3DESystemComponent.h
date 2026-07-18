@@ -16,6 +16,8 @@
 #include <AzFramework/Physics/Collision/CollisionLayers.h>
 #include <AzFramework/Physics/Common/PhysicsEvents.h>
 
+#include <BoxO3DE/Configuration/Box3DConfiguration.h>
+#include <Configuration/Box3DSettingsRegistryManager.h>
 #include <Clients/DefaultWorldComponent.h>
 
 namespace AzPhysics

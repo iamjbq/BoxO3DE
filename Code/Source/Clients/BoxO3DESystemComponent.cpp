@@ -154,13 +154,12 @@ namespace B3
     AZStd::shared_ptr<Physics::Shape> BoxO3DESystemComponent::CreateShape(
         const Physics::ColliderConfiguration& colliderConfiguration, const Physics::ShapeConfiguration& configuration)
     {
-        AZ_UNUSED_2(colliderConfiguration, configuration)
-        // auto shapePtr = AZStd::make_shared<B3::Shape>(colliderConfiguration, configuration);
-        //
-        // if (shapePtr->GetNativePointer())
-        // {
-        //     return shapePtr;
-        // }
+        auto shapePtr = AZStd::make_shared<B3::Shape>(colliderConfiguration, configuration);
+        
+        if (shapePtr->GetNativePointer())
+        {
+            return shapePtr;
+        }
 
         AZ_Error("Box3D", false, "SystemComponent::CreateShape error. Unable to create a shape from configuration.");
 

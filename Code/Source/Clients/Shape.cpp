@@ -26,6 +26,50 @@ namespace B3
         constexpr size_t NumSlices = 48;
     }
 
+    void CylinderShapeConfiguration::Reflect(AZ::ReflectContext* context)
+    {
+        if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
+        {
+            serializeContext
+                ->RegisterGenericType<AZStd::shared_ptr<CylinderShapeConfiguration>>();
+            
+            serializeContext->Class<CylinderShapeConfiguration>()
+                ->Version(1)
+                ->Field("Subdivision", &CylinderShapeConfiguration::m_subdivisionCount)
+                ->Field("Height", &CylinderShapeConfiguration::m_height)
+                ->Field("Radius", &CylinderShapeConfiguration::m_radius)
+            ;
+
+            if (auto* editContext = serializeContext->GetEditContext())
+            {
+                editContext->Class<CylinderShapeConfiguration>("CylinderShapeConfiguration", "Configuration for cylinder collider")
+                    ->ClassElement(AZ::Edit::ClassElements::EditorData, "")
+                    ->Attribute(AZ::Edit::Attributes::AutoExpand, true)
+                    ->DataElement(AZ::Edit::UIHandlers::Default, &CylinderShapeConfiguration::m_subdivisionCount,
+                        "Subdivision", "Cylinder subdivision count.")
+                        ->Attribute(AZ::Edit::Attributes::Min, Utils::MinFrustumSubdivisions)
+                        ->Attribute(AZ::Edit::Attributes::Max, Utils::MaxFrustumSubdivisions)
+                    ->DataElement(AZ::Edit::UIHandlers::Default, &CylinderShapeConfiguration::m_height, "Height", "Cylinder height.")
+                    ->DataElement(AZ::Edit::UIHandlers::Default, &CylinderShapeConfiguration::m_radius, "Radius", "Cylinder radius.")
+                    ;
+            }
+        }
+    }
+
+    CylinderShapeConfiguration::CylinderShapeConfiguration(float height, float radius, const AZ::Vector3& scale,
+        AZ::u8 subdivisionCount)
+            : m_height(height)
+            , m_radius(radius)
+            , ShapeConfiguration(scale)
+            , m_subdivisionCount(subdivisionCount)
+    
+    {
+    }
+
+    // AZ::Capsule CylinderShapeConfiguration::ToCylinder(const AZ::Transform& transform) const
+    // {
+    // }
+
     Shape::Shape(Shape&& shape)
         // : m_box3DShapePtr(AZStd::move(shape.m_box3DShapePtr))
         : m_shapeId(AZStd::move(shape.m_shapeId))

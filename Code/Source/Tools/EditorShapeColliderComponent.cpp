@@ -16,40 +16,40 @@
 
 namespace B3
 {
-    void EditorProxyCylinderShapeConfig::Reflect(AZ::ReflectContext* context)
-    {
-        if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
-        {
-            serializeContext->Class<EditorProxyCylinderShapeConfig>()
-                ->Version(1)
-                ->Field("Configuration", &EditorProxyCylinderShapeConfig::m_configuration)
-                ->Field("Subdivision", &EditorProxyCylinderShapeConfig::m_subdivisionCount)
-                ->Field("Height", &EditorProxyCylinderShapeConfig::m_height)
-                ->Field("Radius", &EditorProxyCylinderShapeConfig::m_radius)
-            ;
-
-            if (auto* editContext = serializeContext->GetEditContext())
-            {
-                editContext->Class<EditorProxyCylinderShapeConfig>("EditorProxyCylinderShapeConfig", "Proxy structure to wrap cylinder data")
-                    ->ClassElement(AZ::Edit::ClassElements::EditorData, "")
-                    ->Attribute(AZ::Edit::Attributes::AutoExpand, true)
-                    ->DataElement(AZ::Edit::UIHandlers::Default, &EditorProxyCylinderShapeConfig::m_configuration,
-                        "Configuration", "Box3D cylinder collider configuration.")
-                        ->Attribute(AZ::Edit::Attributes::Visibility, AZ::Edit::PropertyVisibility::ShowChildrenOnly)
-                    ->DataElement(AZ::Edit::UIHandlers::Default, &EditorProxyCylinderShapeConfig::m_subdivisionCount,
-                        "Subdivision", "Cylinder subdivision count.")
-                        ->Attribute(AZ::Edit::Attributes::Min, Utils::MinFrustumSubdivisions)
-                        ->Attribute(AZ::Edit::Attributes::Max, Utils::MaxFrustumSubdivisions)
-                    ->DataElement(AZ::Edit::UIHandlers::Default, &EditorProxyCylinderShapeConfig::m_height, "Height", "Cylinder height.")
-                    ->DataElement(AZ::Edit::UIHandlers::Default, &EditorProxyCylinderShapeConfig::m_radius, "Radius", "Cylinder radius.")
-                    ;
-            }
-        }
-    }
+    // void EditorProxyCylinderShapeConfig::Reflect(AZ::ReflectContext* context)
+    // {
+    //     if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
+    //     {
+    //         serializeContext->Class<EditorProxyCylinderShapeConfig>()
+    //             ->Version(1)
+    //             ->Field("Configuration", &EditorProxyCylinderShapeConfig::m_configuration)
+    //             ->Field("Subdivision", &EditorProxyCylinderShapeConfig::m_subdivisionCount)
+    //             ->Field("Height", &EditorProxyCylinderShapeConfig::m_height)
+    //             ->Field("Radius", &EditorProxyCylinderShapeConfig::m_radius)
+    //         ;
+    //
+    //         if (auto* editContext = serializeContext->GetEditContext())
+    //         {
+    //             editContext->Class<EditorProxyCylinderShapeConfig>("EditorProxyCylinderShapeConfig", "Proxy structure to wrap cylinder data")
+    //                 ->ClassElement(AZ::Edit::ClassElements::EditorData, "")
+    //                 ->Attribute(AZ::Edit::Attributes::AutoExpand, true)
+    //                 ->DataElement(AZ::Edit::UIHandlers::Default, &EditorProxyCylinderShapeConfig::m_configuration,
+    //                     "Configuration", "Box3D cylinder collider configuration.")
+    //                     ->Attribute(AZ::Edit::Attributes::Visibility, AZ::Edit::PropertyVisibility::ShowChildrenOnly)
+    //                 ->DataElement(AZ::Edit::UIHandlers::Default, &EditorProxyCylinderShapeConfig::m_subdivisionCount,
+    //                     "Subdivision", "Cylinder subdivision count.")
+    //                     ->Attribute(AZ::Edit::Attributes::Min, Utils::MinFrustumSubdivisions)
+    //                     ->Attribute(AZ::Edit::Attributes::Max, Utils::MaxFrustumSubdivisions)
+    //                 ->DataElement(AZ::Edit::UIHandlers::Default, &EditorProxyCylinderShapeConfig::m_height, "Height", "Cylinder height.")
+    //                 ->DataElement(AZ::Edit::UIHandlers::Default, &EditorProxyCylinderShapeConfig::m_radius, "Radius", "Cylinder radius.")
+    //                 ;
+    //         }
+    //     }
+    // }
 
     void EditorProxyShapeConfig::Reflect(AZ::ReflectContext* context)
     {
-        EditorProxyCylinderShapeConfig::Reflect(context);
+        CylinderShapeConfiguration::Reflect(context);
 
         if (auto* serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
@@ -179,7 +179,6 @@ namespace B3
         : m_configuration(colliderConfiguration)
         , m_proxyShapeConfiguration(shapeConfiguration)
     {
-
     }
 
     const EditorProxyShapeConfig& EditorShapeColliderComponent::GetShapeConfiguration() const
@@ -228,6 +227,12 @@ namespace B3
         case Physics::ShapeType::Capsule:
             m_capsule = static_cast<const Physics::CapsuleShapeConfiguration&>(shapeConfiguration);
             break;
+        case Physics::ShapeType::Cylinder:
+            m_cylinder = static_cast<const B3::CylinderShapeConfiguration&>(shapeConfiguration);
+            break;
+        case Physics::ShapeType::ConvexHull:
+            m_convexHull = static_cast<const Physics::ConvexHullShapeConfiguration&>(shapeConfiguration);
+            break;
         case Physics::ShapeType::CookedMesh:
             m_cookedMesh = static_cast<const Physics::CookedMeshShapeConfiguration&>(shapeConfiguration);
             break;
@@ -272,7 +277,9 @@ namespace B3
         case Physics::ShapeType::Capsule:
             return m_capsule;
         case Physics::ShapeType::Cylinder:
-            return m_cylinder.m_configuration;
+            return m_cylinder;
+        case Physics::ShapeType::ConvexHull:
+            return m_convexHull;
         case Physics::ShapeType::CookedMesh:
             return m_cookedMesh;
         default:
@@ -290,7 +297,9 @@ namespace B3
         case Physics::ShapeType::Capsule:
             return AZStd::make_shared<Physics::CapsuleShapeConfiguration>(m_capsule);
         case Physics::ShapeType::Cylinder:
-            return AZStd::make_shared<Physics::CookedMeshShapeConfiguration>(m_cylinder.m_configuration);
+            return AZStd::make_shared<B3::CylinderShapeConfiguration>(m_cylinder);
+        case Physics::ShapeType::ConvexHull:
+            return AZStd::make_shared<Physics::ConvexHullShapeConfiguration>(m_convexHull);
         case Physics::ShapeType::CookedMesh:
             return AZStd::make_shared<Physics::CookedMeshShapeConfiguration>(m_cookedMesh);
         default:
@@ -313,21 +322,6 @@ namespace B3
 
     void EditorShapeColliderComponent::Init()
     {
-        // O3DE_DEPRECATION_NOTICE(GHI-14718)
-        // If initial value is PhysicsAsset, default to Box and update the UI.
-        // To be removed when m_shapeType intial value is changed to Box with GHI-14718.
-        if (m_proxyShapeConfiguration.m_shapeType == Physics::ShapeType::PhysicsAsset)
-        {
-            m_proxyShapeConfiguration.m_shapeType = Physics::ShapeType::Box;
-            // Primitive colliders can only have one material slot.
-            if (m_configuration.m_materialSlots.GetSlotsCount() > 1)
-            {
-                m_configuration.m_materialSlots.SetSlots(Physics::MaterialDefaultSlot::Default);
-            }
-            AzToolsFramework::PropertyEditorGUIMessages::Bus::Broadcast(
-                &AzToolsFramework::PropertyEditorGUIMessages::RequestRefresh,
-                AzToolsFramework::PropertyModificationRefreshLevel::Refresh_AttributesAndValues);
-        }
     }
 
     void EditorShapeColliderComponent::Activate()
@@ -464,7 +458,7 @@ namespace B3
 
         switch (m_proxyShapeConfiguration.m_shapeType)
         {
-        case Physics::ShapeType::Sphere:
+        case Physics::ShapeType::Sphere: // TODO: does need CookedMeshShapeConfiguration for non-uniform spheres
             if (!m_hasNonUniformScale)
             {
                 colliderComponent = gameEntity->CreateComponent<SphereColliderComponent>();
@@ -476,7 +470,7 @@ namespace B3
                 buildGameEntityScaledPrimitive(sharedColliderConfig, m_proxyShapeConfiguration.m_sphere, m_proxyShapeConfiguration.m_subdivisionLevel);
             }
             break;
-        case Physics::ShapeType::Box:
+        case Physics::ShapeType::Box: // TODO: b3MakeScaledBoxHull handles both cases
             if (!m_hasNonUniformScale)
             {
                 colliderComponent = gameEntity->CreateComponent<BoxColliderComponent>();
@@ -503,7 +497,7 @@ namespace B3
         case Physics::ShapeType::Cylinder:
             UpdateCylinderCookedMesh();
             buildGameEntityScaledPrimitive(
-                sharedColliderConfig, m_proxyShapeConfiguration.m_cylinder.m_configuration, m_proxyShapeConfiguration.m_subdivisionLevel);
+                sharedColliderConfig, m_proxyShapeConfiguration.m_cylinder, m_proxyShapeConfiguration.m_subdivisionLevel);
             break;
         case Physics::ShapeType::CookedMesh:
             colliderComponent = gameEntity->CreateComponent<BaseColliderComponent>();
@@ -981,7 +975,7 @@ namespace B3
     {
         UpdateShapeConfigurationScale();
 
-        if (m_proxyShapeConfiguration.IsCylinderConfig())
+        if (m_proxyShapeConfiguration.IsCylinderConfig()) // TODO: not necessary
         {
             // Create cooked cylinder convex
             UpdateCylinderCookedMesh();
@@ -1020,7 +1014,7 @@ namespace B3
             });
 
         const AZ::Vector3 scale = m_proxyShapeConfiguration.m_cylinder.m_configuration.m_scale;
-        m_proxyShapeConfiguration.m_cylinder.m_configuration = Utils::CreatePxCookedMeshConfiguration(samplePoints, scale).value();
+        m_proxyShapeConfiguration.m_cylinder.m_configuration = Utils::CreateCookedMeshConfiguration(samplePoints, scale).value();
     }
 
     AZ::Aabb EditorShapeColliderComponent::GetWorldBounds() const

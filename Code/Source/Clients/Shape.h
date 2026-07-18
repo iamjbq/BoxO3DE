@@ -19,6 +19,37 @@ namespace Physics
 namespace B3
 {
     class Material;
+    
+    class CylinderShapeConfiguration : public Physics::ShapeConfiguration
+    {
+    public:
+        AZ_CLASS_ALLOCATOR(CylinderShapeConfiguration, AZ::SystemAllocator);
+        AZ_RTTI(CylinderShapeConfiguration, "{527F10D5-5C8B-49D2-A20E-6B97E994D6F6}", ShapeConfiguration);
+        static void Reflect(AZ::ReflectContext* context);
+        CylinderShapeConfiguration(
+            float height = Physics::ShapeConstants::DefaultCylinderHeight,
+            float radius = Physics::ShapeConstants::DefaultCylinderRadius,
+            const AZ::Vector3& scale = Physics::ShapeConstants::DefaultScale,
+            AZ::u8 subdivisionCount = Physics::ShapeConstants::DefaultCylinderSubdivisionCount
+            );
+            
+
+        Physics::ShapeType GetShapeType() const override { return Physics::ShapeType::Capsule; }
+        AZStd::shared_ptr<ShapeConfiguration> Clone() const override
+        {
+            return AZStd::make_shared<CylinderShapeConfiguration>(*this);
+        }
+        // TODO: Create B3::Cylinder folowing AZ::Capsule class
+        AZ::Capsule ToCylinder(const AZ::Transform& transform = AZ::Transform::CreateIdentity()) const;
+        
+        float m_height = Physics::ShapeConstants::DefaultCapsuleHeight;
+        float m_radius = Physics::ShapeConstants::DefaultCapsuleRadius;
+        AZ::u8 m_subdivisionCount = Physics::ShapeConstants::DefaultCylinderSubdivisionCount;
+
+    // private:
+    //     void OnHeightChanged();
+    //     void OnRadiusChanged();
+    };
 
     class Shape
         : public Physics::Shape
