@@ -112,7 +112,7 @@ namespace B3
         // using Box3DShapeUniquePtr = AZStd::unique_ptr<b3ShapeId, AZStd::function<void(b3ShapeId*)>>;
         Shape() = default;
 
-        // Box3DShapeUniquePtr m_box3DShapePtr;
+        AZStd::unique_ptr<b3ShapeId> m_box3DShapePtr;
         b3ShapeId m_shapeId = b3_nullShapeId;
         b3ShapeDef m_shapeDef;
         AZStd::vector<AZStd::shared_ptr<B3::Material>> m_materials;

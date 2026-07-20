@@ -79,6 +79,14 @@ namespace B3
             , const ::Physics::ShapeConfiguration& shapeConfiguration
             , const ::Physics::ColliderConfiguration& colliderConfiguration);
         
+        void CreateShapesFromAsset(const Physics::PhysicsAssetShapeConfiguration& assetConfiguration,
+            const Physics::ColliderConfiguration& originalColliderConfiguration, bool hasNonUniformScale,
+            AZ::u8 subdivisionLevel, AZStd::vector<AZStd::shared_ptr<Physics::Shape>>& resultingShapes);
+
+        // void GetColliderShapeConfigsFromAsset(const Physics::PhysicsAssetShapeConfiguration& assetConfiguration,
+        //     const Physics::ColliderConfiguration& originalColliderConfiguration,
+        //     bool hasNonUniformScale, AZ::u8 subdivisionLevel, AzPhysics::ShapeColliderPairList& resultingColliderShapes);
+        
         //! Returns whether a shape configuration describes a primitive shape such as a box or sphere, as opposed to mesh geometry.
         bool IsPrimitiveShape(const Physics::ShapeConfiguration& shapeConfig);
 

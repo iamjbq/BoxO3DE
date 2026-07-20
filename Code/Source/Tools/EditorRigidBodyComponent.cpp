@@ -36,10 +36,10 @@ namespace B3
             {
                 const EditorProxyShapeConfig& shapeConfigurationProxy = collider->GetShapeConfiguration();
                 const Physics::ShapeConfiguration& shapeConfiguration = shapeConfigurationProxy.GetCurrent();
-                if (!hasNonUniformScaleComponent && !shapeConfigurationProxy.IsCylinderConfig())
+                if (!hasNonUniformScaleComponent && !shapeConfigurationProxy.IsCylinderConfig()) // TODO: fix to reflect new editor collider
                 {
                     const Physics::ColliderConfiguration colliderConfigurationScaled = collider->GetColliderConfigurationScaled();
-                    AZStd::shared_ptr<Physics::Shape> shape = AZ::Interface<Physics::System>::Get()->CreateShape(
+                    AZStd::shared_ptr<Physics::Shape> shape = AZ::Interface<Physics::System>::Get()->CreateShape( // TODO crash
                         colliderConfigurationScaled, shapeConfiguration);
                     AZ_Assert(shape, "CreateCollisionShapes: Shape must not be null!")
                     if (shape)

@@ -16,6 +16,8 @@
 #include <BoxO3DE/MathConversions.h>
 #include <Scene/Box3DScene.h>
 
+#include <box3d/box3d.h>
+
 namespace B3
 {
     // ShapeInfoCache
@@ -55,21 +57,23 @@ namespace B3
                 return;
             }
 
-            auto* pxScene = static_cast<physx::PxScene*>(scene->GetNativePointer());
+            [[maybe_unused]] auto* worldId = static_cast<b3WorldId*>(scene->GetNativePointer());
+            [[maybe_unused]] b3Transform box3D = Box3DMathConvert(m_worldTransform);
 
-            auto pxShape = static_cast<physx::PxShape*>(shapes[0]->GetNativePointer());
-            physx::PxTransform pxWorldTransform = Box3DMathConvert(m_worldTransform);
-            
-            const physx::PxGeometry& pxShapeGeom = pxShape->getGeometry();
-
-            physx::PxBounds3 bounds = physx::PxGeometryQuery::getWorldBounds(pxShapeGeom,
-                pxWorldTransform * pxShape->getLocalPose(), 1.0f);
+            auto shapeId = static_cast<b3ShapeId*>(shapes[0]->GetNativePointer());
+            b3AABB bounds = {0};
+            if (b3Shape_IsValid(*shapeId))
+            {
+                bounds = b3Shape_GetAABB(*shapeId);
+            }
 
             for (size_t shapeIndex = 1; shapeIndex < numShapes; ++shapeIndex)
             {
-                pxShape = static_cast<physx::PxShape*>(shapes[0]->GetNativePointer());
-                bounds.include(physx::PxGeometryQuery::getWorldBounds(pxShapeGeom,
-                    pxWorldTransform * pxShape->getLocalPose(), 1.0f));
+                shapeId = static_cast<b3ShapeId*>(shapes[shapeIndex]->GetNativePointer());
+                if (b3IsSaneAABB(bounds) && b3Shape_IsValid(*shapeId))
+                {
+                    bounds = b3AABB_Union(bounds, b3Shape_GetAABB(*shapeId));
+                }
             }
 
             m_aabb = Box3DMathConvert(bounds);

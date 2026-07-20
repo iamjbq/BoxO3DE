@@ -38,7 +38,7 @@ namespace B3
     //     static void Reflect(AZ::ReflectContext* context);
     //
     //     //! Cylinder specific parameters.
-    //     AZ::u8 m_subdivisionCount = Physics::ShapeConstants::DefaultCylinderSubdivisionCount;
+    AZ::u8 m_subdivisionCount = Physics::ShapeConstants::DefaultCylinderSubdivisionCount;
     //     float m_height = Physics::ShapeConstants::DefaultCylinderHeight;
     //     float m_radius = Physics::ShapeConstants::DefaultCylinderRadius;
     //

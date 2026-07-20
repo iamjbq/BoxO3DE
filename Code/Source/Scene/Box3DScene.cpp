@@ -201,6 +201,7 @@ namespace B3
                 worldDef.workerCount = AZStd::thread::hardware_concurrency(); // Internally capped at 32
             
             m_worldId = b3CreateWorld(&worldDef);
+            m_worldIdPtr = AZStd::make_shared<b3WorldId>(m_worldId);
             AZ_Assert(b3World_IsValid(m_worldId), "B3::Box3DScene world creation failed");
         }
         
@@ -228,6 +229,7 @@ namespace B3
         ClearDeferedDeletions();
 
         b3DestroyWorld(m_worldId);
+        m_worldIdPtr.reset();
     }
 
     void Box3DScene::StartSimulation(float deltatime)
@@ -783,9 +785,7 @@ namespace B3
 
     void* Box3DScene::GetNativePointer() const
     {
-        AZ_Warning("Box3DScene", false, "Box3DScene::GetNativePointer() is not implemented");
-        
-        return nullptr;
+        return m_worldIdPtr.get();
     }
 
     void Box3DScene::FlushTransformSync()

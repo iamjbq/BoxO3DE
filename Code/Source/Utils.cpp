@@ -357,7 +357,34 @@ namespace B3
         {
             return GetTransformScale(entityId) * GetNonUniformScale(entityId);
         }
-        
+
+        void CreateShapesFromAsset(const Physics::PhysicsAssetShapeConfiguration& assetConfiguration,
+            const Physics::ColliderConfiguration& originalColliderConfiguration, bool hasNonUniformScale,
+            AZ::u8 subdivisionLevel, AZStd::vector<AZStd::shared_ptr<Physics::Shape>>& resultingShapes)
+        {
+            AZ_UNUSED_5(assetConfiguration, originalColliderConfiguration, hasNonUniformScale, subdivisionLevel, resultingShapes);
+            // AzPhysics::ShapeColliderPairList resultingColliderShapeConfigs;
+            // GetColliderShapeConfigsFromAsset(assetConfiguration, originalColliderConfiguration,
+            //     hasNonUniformScale, subdivisionLevel, resultingColliderShapeConfigs);
+            //
+            // resultingShapes.reserve(resultingShapes.size() + resultingColliderShapeConfigs.size());
+            //
+            // for (const AzPhysics::ShapeColliderPair& shapeConfigPair : resultingColliderShapeConfigs)
+            // {
+            //     // Scale the collider offset
+            //     shapeConfigPair.first->m_position *= shapeConfigPair.second->m_scale;
+            //
+            //     AZStd::shared_ptr<Physics::Shape> shape;
+            //     Physics::SystemRequestBus::BroadcastResult(shape, &Physics::SystemRequests::CreateShape,
+            //         *shapeConfigPair.first, *shapeConfigPair.second);
+            //
+            //     if (shape)
+            //     {
+            //         resultingShapes.emplace_back(shape);
+            //     }
+            // }
+        }
+
         // AZ::Aabb GetColliderAabb(const AZ::Transform& worldTransform,
         //     bool hasNonUniformScale,
         //     AZ::u8 subdivisionLevel,

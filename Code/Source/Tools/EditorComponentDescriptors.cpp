@@ -3,6 +3,7 @@
 #include <Tools/System/Box3DEditorSettingsRegistryManager.h>
 #include <Tools/EditorStaticRigidBodyComponent.h>
 #include <Tools/EditorRigidBodyComponent.h>
+#include <Tools/EditorShapeColliderComponent.h>
 
 namespace B3
 {
@@ -13,7 +14,8 @@ namespace B3
             BoxO3DEEditorSystemComponent::CreateDescriptor(),
             BoxO3DESystemComponent::CreateDescriptor(),
             EditorStaticRigidBodyComponent::CreateDescriptor(),
-            EditorRigidBodyComponent::CreateDescriptor()
+            EditorRigidBodyComponent::CreateDescriptor(),
+            EditorShapeColliderComponent::CreateDescriptor()
         };
 
         return descriptors;

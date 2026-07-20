@@ -21,7 +21,7 @@ namespace B3
     {
         if (m_shapeConfigList.size() != 1)
         {
-            AZ_Error("PhysX Capsule Collider Component", false,
+            AZ_Error("Box3D Capsule Collider Component", false,
                 "Expected exactly one collider/shape configuration for entity \"%s\".", GetEntity()->GetName().c_str());
             return;
         }

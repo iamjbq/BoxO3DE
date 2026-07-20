@@ -343,7 +343,7 @@ namespace B3
         {
         case b3ShapeType::b3_sphereShape:
             {
-                return Box3DMathConvert(b3Shape_GetSphere(m_shapeId).center);
+                return { Box3DMathConvert(b3Shape_GetSphere(m_shapeId).center), AZ::Quaternion::CreateIdentity() };
             }
         case b3ShapeType::b3_capsuleShape:
             {
@@ -415,7 +415,7 @@ namespace B3
 
     void* Shape::GetNativePointer()
     {
-        return nullptr;
+        return m_box3DShapePtr.get();
     }
 
     const void* Shape::GetNativePointer() const
@@ -447,17 +447,19 @@ namespace B3
             m_attachedBody = *bodyId;
 
             m_shapeId = Utils::CreateBox3DShapeFromConfig(*m_colliderConfiguration, *m_shapeConfiguration, m_shapeDef, m_attachedBody);
+            m_box3DShapePtr = AZStd::make_unique<b3ShapeId>(m_shapeId);
         }
     }
 
     void Shape::DetachedFromActor()
     {
         b3DestroyShape(m_shapeId, true);
+        m_box3DShapePtr.reset();
     }
 
     AzPhysics::SceneQueryHit Shape::RayCastInternal(const AzPhysics::RayCastRequest& worldSpaceRequest, const b3WorldTransform& pose)
     {
-        AZ_UNUSED(pose);
+        AZ_UNUSED(pose)
         if (const bool shouldCollide = worldSpaceRequest.m_collisionGroup.GetMask() & m_collisionLayer.GetMask();
             !shouldCollide)
         {
@@ -469,7 +471,7 @@ namespace B3
         // const AZ::u32 maxHits = 1;
         // const physx::PxHitFlags hitFlags = SceneQueryHelpers::GetPxHitFlags(worldSpaceRequest.m_hitFlags);
         
-        b3QueryFilter filter = b3DefaultQueryFilter();
+        // b3QueryFilter filter = b3DefaultQueryFilter();
         // b3RayResult result = b3World_CastRayClosest(b3Shape_GetWorld(m_shapeId), start, translation, filter);
         b3WorldCastOutput result = b3Shape_RayCast(m_shapeId, start, translation);
         
@@ -540,9 +542,8 @@ namespace B3
         return RayCastInternal(localSpaceRequest, worldTransform); // TODO: properly get local pose
     }
 
-    AZ::Aabb Shape::GetAabb(const AZ::Transform& worldTransform) const
+    AZ::Aabb Shape::GetAabb([[maybe_unused]] const AZ::Transform& worldTransform) const
     {
-        AZ_UNUSED(worldTransform);
         return Box3DMathConvert(b3Shape_GetAABB(m_shapeId));
     }
 

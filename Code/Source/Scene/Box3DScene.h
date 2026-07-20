@@ -144,6 +144,7 @@ namespace B3
         // physx::PxControllerManager* m_controllerManager = nullptr; //!< The physx controller manager
         
         b3WorldId m_worldId;
+        AZStd::shared_ptr<b3WorldId> m_worldIdPtr;
         
         int m_subStepCount = 4;
         AZ::Vector3 m_gravity; // cache the gravity of the scene to avoid a lock in GetGravity().
