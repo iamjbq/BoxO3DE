@@ -138,7 +138,7 @@ namespace B3
         if (auto serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
             serializeContext->Class<EditorShapeColliderComponent, EditorComponentBase>()
-                ->Version(2 + (1<<b3GetVersion().major)) // Use Box3D version to trigger prefabs recompilation when version is updated.
+                ->Version(1 + (1<<b3GetVersion().major)) // Use Box3D version to trigger prefabs recompilation when version is updated.
                 ->Field("ColliderConfiguration", &EditorShapeColliderComponent::m_configuration)
                 ->Field("ShapeConfiguration", &EditorShapeColliderComponent::m_proxyShapeConfiguration)
                 // ->Field("DebugDrawSettings", &EditorShapeColliderComponent::m_colliderDebugDraw)
@@ -176,8 +176,8 @@ namespace B3
     EditorShapeColliderComponent::EditorShapeColliderComponent(
         const Physics::ColliderConfiguration& colliderConfiguration,
         const Physics::ShapeConfiguration& shapeConfiguration)
-        : m_configuration(colliderConfiguration)
-        , m_proxyShapeConfiguration(shapeConfiguration)
+        : m_proxyShapeConfiguration(shapeConfiguration)
+        , m_configuration(colliderConfiguration)
     {
     }
 
@@ -312,7 +312,8 @@ namespace B3
 
     bool EditorProxyShapeConfig::IsNonUniformlyScaledPrimitive() const
     {
-        return m_hasNonUniformScale && (Utils::IsPrimitiveShape(GetCurrent()) || IsCylinderConfig());
+        // box and cylinder are build as convex hulls
+        return m_hasNonUniformScale && (Utils::IsPrimitiveShape(GetCurrent()) || IsCylinderConfig() || IsBoxConfig());
     }
 
     bool EditorProxyShapeConfig::ShowingSubdivisionLevel() const
@@ -444,7 +445,7 @@ namespace B3
         auto buildGameEntityScaledPrimitive = [gameEntity](AZStd::shared_ptr<Physics::ColliderConfiguration>& colliderConfig,
             Physics::ShapeConfiguration& shapeConfig, AZ::u8 subdivisionLevel)
         {
-            auto scaledPrimitiveConfig = Utils::CreateConvexFromPrimitive(*colliderConfig,
+            auto scaledPrimitiveConfig = Utils::CreateConvexPointsFromPrimitive(*colliderConfig,
                 shapeConfig, subdivisionLevel, shapeConfig.m_scale);
             if (scaledPrimitiveConfig.has_value())
             {
@@ -458,7 +459,7 @@ namespace B3
 
         switch (m_proxyShapeConfiguration.m_shapeType)
         {
-        case Physics::ShapeType::Sphere: // TODO: does need CookedMeshShapeConfiguration for non-uniform spheres
+        case Physics::ShapeType::Sphere: // TODO: Non-uniform spheres, capsules, and cylinders are convex hulls
             if (!m_hasNonUniformScale)
             {
                 colliderComponent = gameEntity->CreateComponent<SphereColliderComponent>();
@@ -495,7 +496,7 @@ namespace B3
             }
             break;
         case Physics::ShapeType::Cylinder:
-            UpdateCylinderCookedMesh();
+            UpdateCylinderConvexHull();
             buildGameEntityScaledPrimitive(
                 sharedColliderConfig, m_proxyShapeConfiguration.m_cylinder, m_proxyShapeConfiguration.m_subdivisionLevel);
             break;
@@ -519,94 +520,94 @@ namespace B3
     void EditorShapeColliderComponent::UpdateCollider()
     {
         UpdateShapeConfiguration();
-        CreateStaticEditorCollider();
+        // CreateStaticEditorCollider(); // TODO: This doubles the body that is created by a body component
         Physics::ColliderComponentEventBus::Event(GetEntityId(), &Physics::ColliderComponentEvents::OnColliderChanged);
     }
 
     void EditorShapeColliderComponent::CreateStaticEditorCollider()
     {
-        m_cachedAabbDirty = true;
-
-        if (!GetEntity()->FindComponent<EditorStaticRigidBodyComponent>())
-        {
-            // m_colliderDebugDraw.ClearCachedGeometry();
-            return;
-        }
-
-        AZ::Transform colliderTransform = GetWorldTM();
-        colliderTransform.ExtractUniformScale();
-        AzPhysics::StaticRigidBodyConfiguration configuration;
-        configuration.m_orientation = colliderTransform.GetRotation();
-        configuration.m_position = colliderTransform.GetTranslation();
-        configuration.m_entityId = GetEntityId();
-        configuration.m_debugName = GetEntity()->GetName();
-
-        AZStd::shared_ptr<Physics::ColliderConfiguration> colliderConfig = AZStd::make_shared<Physics::ColliderConfiguration>(
-            GetColliderConfigurationScaled());
-        AZStd::shared_ptr<Physics::ShapeConfiguration> shapeConfig = m_proxyShapeConfiguration.CloneCurrent();
-
-        if (m_proxyShapeConfiguration.IsNonUniformlyScaledPrimitive() || m_proxyShapeConfiguration.IsCylinderConfig())
-        {
-            auto convexConfig = Utils::CreateConvexFromPrimitive(GetColliderConfiguration(), *(shapeConfig.get()),
-                m_proxyShapeConfiguration.m_subdivisionLevel, shapeConfig->m_scale);
-            Physics::ColliderConfiguration colliderConfigurationNoOffset = *colliderConfig;
-            colliderConfigurationNoOffset.m_rotation = AZ::Quaternion::CreateIdentity();
-            colliderConfigurationNoOffset.m_position = AZ::Vector3::CreateZero();
-
-            if (convexConfig.has_value())
-            {
-                AZStd::shared_ptr<Physics::Shape> shape = AZ::Interface<Physics::System>::Get()->CreateShape(
-                    colliderConfigurationNoOffset, convexConfig.value());
-                configuration.m_colliderAndShapeData = shape;
-            }
-        }
-        else
-        {
-            configuration.m_colliderAndShapeData = AzPhysics::ShapeColliderPair(colliderConfig, shapeConfig);
-        }
-
-        if (m_sceneInterface)
-        {
-            //remove the previous body if any
-            if (m_editorBodyHandle != AzPhysics::InvalidSimulatedBodyHandle)
-            {
-                m_sceneInterface->RemoveSimulatedBody(m_editorSceneHandle, m_editorBodyHandle);
-            }
-            
-            m_editorBodyHandle = m_sceneInterface->AddSimulatedBody(m_editorSceneHandle, &configuration);
-        }
+        // m_cachedAabbDirty = true;
+        //
+        // if (!GetEntity()->FindComponent<EditorStaticRigidBodyComponent>())
+        // {
+        //     // m_colliderDebugDraw.ClearCachedGeometry();
+        //     return;
+        // }
+        //
+        // AZ::Transform colliderTransform = GetWorldTM();
+        // colliderTransform.ExtractUniformScale();
+        // AzPhysics::StaticRigidBodyConfiguration configuration;
+        // configuration.m_orientation = colliderTransform.GetRotation();
+        // configuration.m_position = colliderTransform.GetTranslation();
+        // configuration.m_entityId = GetEntityId();
+        // configuration.m_debugName = GetEntity()->GetName();
+        //
+        // AZStd::shared_ptr<Physics::ColliderConfiguration> colliderConfig = AZStd::make_shared<Physics::ColliderConfiguration>(
+        //     GetColliderConfigurationScaled());
+        // AZStd::shared_ptr<Physics::ShapeConfiguration> shapeConfig = m_proxyShapeConfiguration.CloneCurrent();
+        //
+        // if (m_proxyShapeConfiguration.IsNonUniformlyScaledPrimitive() || m_proxyShapeConfiguration.IsCylinderConfig())
+        // {
+        //     auto convexConfig = Utils::CreateConvexPointsFromPrimitive(GetColliderConfiguration(), *(shapeConfig.get()),
+        //         m_proxyShapeConfiguration.m_subdivisionLevel, shapeConfig->m_scale);
+        //     Physics::ColliderConfiguration colliderConfigurationNoOffset = *colliderConfig;
+        //     colliderConfigurationNoOffset.m_rotation = AZ::Quaternion::CreateIdentity();
+        //     colliderConfigurationNoOffset.m_position = AZ::Vector3::CreateZero();
+        //
+        //     if (convexConfig.has_value())
+        //     {
+        //         AZStd::shared_ptr<Physics::Shape> shape = AZ::Interface<Physics::System>::Get()->CreateShape(
+        //             colliderConfigurationNoOffset, convexConfig.value());
+        //         configuration.m_colliderAndShapeData = shape;
+        //     }
+        // }
+        // else
+        // {
+        //     configuration.m_colliderAndShapeData = AzPhysics::ShapeColliderPair(colliderConfig, shapeConfig);
+        // }
+        //
+        // if (m_sceneInterface)
+        // {
+        //     //remove the previous body if any
+        //     if (m_editorBodyHandle != AzPhysics::InvalidSimulatedBodyHandle)
+        //     {
+        //         m_sceneInterface->RemoveSimulatedBody(m_editorSceneHandle, m_editorBodyHandle);
+        //     }
+        //     
+        //     m_editorBodyHandle = m_sceneInterface->AddSimulatedBody(m_editorSceneHandle, &configuration);
+        // }
 
         // m_colliderDebugDraw.ClearCachedGeometry();
 
-        AzPhysics::SimulatedBodyComponentRequestsBus::Handler::BusConnect(GetEntityId());
+        // AzPhysics::SimulatedBodyComponentRequestsBus::Handler::BusConnect(GetEntityId());
     }
 
-    // void EditorShapeColliderComponent::BuildDebugDrawMesh() const
-    // {
-    //     const AZ::u32 shapeIndex = 0; // There's only one mesh gets built from the primitive collider, hence use geomIndex 0.
-    //     if (m_proxyShapeConfiguration.IsCylinderConfig())
-    //     {
-    //         physx::PxGeometryHolder pxGeometryHolder;
-    //         Utils::CreatePxGeometryFromConfig(
-    //             m_proxyShapeConfiguration.m_cylinder.m_configuration, pxGeometryHolder); // this will cause the native mesh to be cached
-    //         m_colliderDebugDraw.BuildMeshes(m_proxyShapeConfiguration.m_cylinder.m_configuration, shapeIndex);
-    //     }
-    //     else if (!m_hasNonUniformScale)
-    //     {
-    //         m_colliderDebugDraw.BuildMeshes(m_proxyShapeConfiguration.GetCurrent(), shapeIndex);
-    //     }
-    //     else
-    //     {
-    //         m_scaledPrimitive = Utils::CreateConvexFromPrimitive(GetColliderConfiguration(), m_proxyShapeConfiguration.GetCurrent(),
-    //             m_proxyShapeConfiguration.m_subdivisionLevel, m_proxyShapeConfiguration.GetCurrent().m_scale);
-    //         if (m_scaledPrimitive.has_value())
-    //         {
-    //             physx::PxGeometryHolder pxGeometryHolder;
-    //             Utils::CreatePxGeometryFromConfig(m_scaledPrimitive.value(), pxGeometryHolder); // this will cause the native mesh to be cached
-    //             m_colliderDebugDraw.BuildMeshes(m_scaledPrimitive.value(), shapeIndex);
-    //         }
-    //     }
-    // }
+    void EditorShapeColliderComponent::BuildDebugDrawMesh() const
+    {
+        const AZ::u32 shapeIndex = 0; // Only one mesh gets built from the primitive collider, hence use geomIndex 0.
+        if (m_proxyShapeConfiguration.IsCylinderConfig())
+        {
+            physx::PxGeometryHolder pxGeometryHolder;
+            Utils::CreatePxGeometryFromConfig( // This takes the points created from FrustumExtents and builds geometry
+                m_proxyShapeConfiguration.m_cylinder.m_configuration, pxGeometryHolder); // this will cause the native mesh to be cached
+            m_colliderDebugDraw.BuildMeshes(m_proxyShapeConfiguration.m_cylinder.m_configuration, shapeIndex);
+        }
+        else if (!m_hasNonUniformScale)
+        {
+            m_colliderDebugDraw.BuildMeshes(m_proxyShapeConfiguration.GetCurrent(), shapeIndex);
+        }
+        else
+        {
+            m_scaledPrimitive = Utils::CreateConvexPointsFromPrimitive(GetColliderConfiguration(), m_proxyShapeConfiguration.GetCurrent(),
+                m_proxyShapeConfiguration.m_subdivisionLevel, m_proxyShapeConfiguration.GetCurrent().m_scale);
+            if (m_scaledPrimitive.has_value())
+            {
+                physx::PxGeometryHolder pxGeometryHolder;
+                Utils::CreatePxGeometryFromConfig(m_scaledPrimitive.value(), pxGeometryHolder); // this will cause the native mesh to be cached
+                m_colliderDebugDraw.BuildMeshes(m_scaledPrimitive.value(), shapeIndex);
+            }
+        }
+    }
 
     // void EditorShapeColliderComponent::DisplayCylinderCollider(AzFramework::DebugDisplayRequests& debugDisplay) const
     // {
@@ -752,74 +753,74 @@ namespace B3
         shapeConfiguration.m_scale = GetWorldTM().ExtractUniformScale() * m_cachedNonUniformScale;
     }
 
-    void EditorShapeColliderComponent::EnablePhysics()
-    {
-        if (!IsPhysicsEnabled())
-        {
-            UpdateCollider();
-        }
-    }
-
-    void EditorShapeColliderComponent::DisablePhysics()
-    {
-        if (m_sceneInterface && m_editorBodyHandle != AzPhysics::InvalidSimulatedBodyHandle)
-        {
-            m_sceneInterface->RemoveSimulatedBody(m_editorSceneHandle, m_editorBodyHandle);
-        }
-    }
-
-    bool EditorShapeColliderComponent::IsPhysicsEnabled() const
-    {
-        if (m_sceneInterface && m_editorBodyHandle != AzPhysics::InvalidSimulatedBodyHandle)
-        {
-            if (auto* body = m_sceneInterface->GetSimulatedBodyFromHandle(m_editorSceneHandle, m_editorBodyHandle))
-            {
-                return body->m_simulating;
-            }
-        }
-        return false;
-    }
-
-    AZ::Aabb EditorShapeColliderComponent::GetAabb() const
-    {
-        if (m_sceneInterface && m_editorBodyHandle != AzPhysics::InvalidSimulatedBodyHandle)
-        {
-            if (auto* body = m_sceneInterface->GetSimulatedBodyFromHandle(m_editorSceneHandle, m_editorBodyHandle))
-            {
-                return body->GetAabb();
-            }
-        }
-        return AZ::Aabb::CreateNull();
-    }
-
-    AzPhysics::SimulatedBody* EditorShapeColliderComponent::GetSimulatedBody()
-    {
-        if (m_sceneInterface && m_editorBodyHandle != AzPhysics::InvalidSimulatedBodyHandle)
-        {
-            if (auto* body = m_sceneInterface->GetSimulatedBodyFromHandle(m_editorSceneHandle, m_editorBodyHandle))
-            {
-                return body;
-            }
-        }
-        return nullptr;
-    }
-
-    AzPhysics::SimulatedBodyHandle EditorShapeColliderComponent::GetSimulatedBodyHandle() const
-    {
-        return m_editorBodyHandle;
-    }
-
-    AzPhysics::SceneQueryHit EditorShapeColliderComponent::RayCast(const AzPhysics::RayCastRequest& request)
-    {
-        if (m_sceneInterface && m_editorBodyHandle != AzPhysics::InvalidSimulatedBodyHandle)
-        {
-            if (auto* body = m_sceneInterface->GetSimulatedBodyFromHandle(m_editorSceneHandle, m_editorBodyHandle))
-            {
-                return body->RayCast(request);
-            }
-        }
-        return AzPhysics::SceneQueryHit();
-    }
+    // void EditorShapeColliderComponent::EnablePhysics()
+    // {
+    //     if (!IsPhysicsEnabled())
+    //     {
+    //         UpdateCollider();
+    //     }
+    // }
+    //
+    // void EditorShapeColliderComponent::DisablePhysics()
+    // {
+    //     if (m_sceneInterface && m_editorBodyHandle != AzPhysics::InvalidSimulatedBodyHandle)
+    //     {
+    //         m_sceneInterface->RemoveSimulatedBody(m_editorSceneHandle, m_editorBodyHandle);
+    //     }
+    // }
+    //
+    // bool EditorShapeColliderComponent::IsPhysicsEnabled() const
+    // {
+    //     if (m_sceneInterface && m_editorBodyHandle != AzPhysics::InvalidSimulatedBodyHandle)
+    //     {
+    //         if (auto* body = m_sceneInterface->GetSimulatedBodyFromHandle(m_editorSceneHandle, m_editorBodyHandle))
+    //         {
+    //             return body->m_simulating;
+    //         }
+    //     }
+    //     return false;
+    // }
+    //
+    // AZ::Aabb EditorShapeColliderComponent::GetAabb() const
+    // {
+    //     if (m_sceneInterface && m_editorBodyHandle != AzPhysics::InvalidSimulatedBodyHandle)
+    //     {
+    //         if (auto* body = m_sceneInterface->GetSimulatedBodyFromHandle(m_editorSceneHandle, m_editorBodyHandle))
+    //         {
+    //             return body->GetAabb();
+    //         }
+    //     }
+    //     return AZ::Aabb::CreateNull();
+    // }
+    //
+    // AzPhysics::SimulatedBody* EditorShapeColliderComponent::GetSimulatedBody()
+    // {
+    //     if (m_sceneInterface && m_editorBodyHandle != AzPhysics::InvalidSimulatedBodyHandle)
+    //     {
+    //         if (auto* body = m_sceneInterface->GetSimulatedBodyFromHandle(m_editorSceneHandle, m_editorBodyHandle))
+    //         {
+    //             return body;
+    //         }
+    //     }
+    //     return nullptr;
+    // }
+    //
+    // AzPhysics::SimulatedBodyHandle EditorShapeColliderComponent::GetSimulatedBodyHandle() const
+    // {
+    //     return m_editorBodyHandle;
+    // }
+    //
+    // AzPhysics::SceneQueryHit EditorShapeColliderComponent::RayCast(const AzPhysics::RayCastRequest& request)
+    // {
+    //     if (m_sceneInterface && m_editorBodyHandle != AzPhysics::InvalidSimulatedBodyHandle)
+    //     {
+    //         if (auto* body = m_sceneInterface->GetSimulatedBodyFromHandle(m_editorSceneHandle, m_editorBodyHandle))
+    //         {
+    //             return body->RayCast(request);
+    //         }
+    //     }
+    //     return AzPhysics::SceneQueryHit();
+    // }
 
     bool EditorShapeColliderComponent::IsTrigger()
     {
@@ -859,7 +860,7 @@ namespace B3
 
         if (shapeType == Physics::ShapeType::Cylinder)
         {
-            UpdateCylinderCookedMesh();
+            UpdateCylinderConvexHull(); // TODO: need to clear these out
         }
 
         UpdateCollider();
@@ -923,7 +924,7 @@ namespace B3
         }
 
         m_proxyShapeConfiguration.m_cylinder.m_radius = radius;
-        UpdateCylinderCookedMesh();
+        UpdateCylinderConvexHull();
         UpdateCollider();
     }
 
@@ -941,7 +942,7 @@ namespace B3
         }
 
         m_proxyShapeConfiguration.m_cylinder.m_height = height;
-        UpdateCylinderCookedMesh();
+        UpdateCylinderConvexHull();
         UpdateCollider();
     }
 
@@ -962,7 +963,7 @@ namespace B3
             Utils::MaxFrustumSubdivisions,
             GetEntity()->GetName().c_str());
         m_proxyShapeConfiguration.m_cylinder.m_subdivisionCount = clampedSubdivisionCount;
-        UpdateCylinderCookedMesh();
+        UpdateCylinderConvexHull();
         UpdateCollider();
     }
 
@@ -974,15 +975,74 @@ namespace B3
     void EditorShapeColliderComponent::UpdateShapeConfiguration()
     {
         UpdateShapeConfigurationScale();
-
-        if (m_proxyShapeConfiguration.IsCylinderConfig()) // TODO: not necessary
+        
+        if (!m_proxyShapeConfiguration.m_hasNonUniformScale)
         {
-            // Create cooked cylinder convex
-            UpdateCylinderCookedMesh();
+            return;
+        }
+        
+        // Box3D has helper functions to make non-uniform scaled box and cylinder hulls
+        // We only need to supply our own hull vertices for these cases
+        if (m_proxyShapeConfiguration.IsSphereConfig())
+        {
+            // Create a sphere convex hull
+            UpdateSphereConvexHull();
+        }
+        else if (m_proxyShapeConfiguration.IsCapsuleConfig())
+        {
+            // Create a capsule convex hull
+            UpdateCapsuleConvexHull();
+        }
+    }
+    
+    void EditorShapeColliderComponent::UpdateSphereConvexHull()
+    {
+        const AZ::u8 subdivisionCount = m_proxyShapeConfiguration.m_subdivisionLevel;
+        const float radius = m_proxyShapeConfiguration.m_cylinder.m_radius;
+
+        if (radius <= 0.0f)
+        {
+            AZ_Error("Box3D", false, "Sphere radius must be greater than zero. Entity: %s", GetEntity()->GetName().c_str())
+            return;
+        }
+        
+        auto sphereHullConfig = Utils::CreateConvexPointsFromPrimitive(GetColliderConfiguration(), m_proxyShapeConfiguration.m_sphere,
+                m_proxyShapeConfiguration.m_subdivisionLevel, m_proxyShapeConfiguration.GetCurrent().m_scale);
+        
+        if (sphereHullConfig.has_value())
+        {
+            m_proxyShapeConfiguration.m_convexHull = sphereHullConfig.value();
         }
     }
 
-    void EditorShapeColliderComponent::UpdateCylinderCookedMesh()
+    void EditorShapeColliderComponent::UpdateCapsuleConvexHull()
+    {
+        const AZ::u8 subdivisionCount = m_proxyShapeConfiguration.m_subdivisionLevel;
+        const float radius = m_proxyShapeConfiguration.m_capsule.m_radius;
+        const float height = m_proxyShapeConfiguration.m_capsule.m_height;
+
+        if (height <= 0.0f)
+        {
+            AZ_Error("Box3D", false, "Capsule height must be greater than zero. Entity: %s", GetEntity()->GetName().c_str())
+            return;
+        }
+        
+        if (radius <= 0.0f)
+        {
+            AZ_Error("Box3D", false, "Sphere radius must be greater than zero. Entity: %s", GetEntity()->GetName().c_str())
+            return;
+        }
+        
+        auto capsuleHullConfig = Utils::CreateConvexPointsFromPrimitive(GetColliderConfiguration(), m_proxyShapeConfiguration.m_capsule,
+                m_proxyShapeConfiguration.m_subdivisionLevel, m_proxyShapeConfiguration.GetCurrent().m_scale);
+        
+        if (capsuleHullConfig.has_value())
+        {
+            m_proxyShapeConfiguration.m_convexHull = capsuleHullConfig.value();
+        }
+    }
+
+    void EditorShapeColliderComponent::UpdateCylinderConvexHull()
     {
         const AZ::u8 subdivisionCount = m_proxyShapeConfiguration.m_cylinder.m_subdivisionCount;
         const float height = m_proxyShapeConfiguration.m_cylinder.m_height;
@@ -990,36 +1050,36 @@ namespace B3
 
         if (height <= 0.0f)
         {
-            AZ_Error("Box3D", false, "Cylinder height must be greater than zero. Entity: %s", GetEntity()->GetName().c_str());
-            return;
+             AZ_Error("Box3D", false, "Cylinder height must be greater than zero. Entity: %s", GetEntity()->GetName().c_str())
+             return;
         }
 
         if (radius <= 0.0f)
         {
-            AZ_Error("Box3D", false, "Cylinder radius must be greater than zero. Entity: %s", GetEntity()->GetName().c_str());
-            return;
+             AZ_Error("Box3D", false, "Cylinder radius must be greater than zero. Entity: %s", GetEntity()->GetName().c_str())
+             return;
         }
-
-        Utils::Geometry::PointList samplePoints = Utils::CreatePointsAtFrustumExtents(height, radius, radius, subdivisionCount).value();
+        
+        AZStd::vector<AZ::Vector3> samplePoints = Utils::CreatePointsAtFrustumExtents(height, radius, radius, subdivisionCount).value();
 
         const AZ::Transform colliderLocalTransform = GetColliderLocalTransform();
 
         AZStd::transform(
-            samplePoints.begin(),
-            samplePoints.end(),
-            samplePoints.begin(),
-            [&colliderLocalTransform](const AZ::Vector3& point)
-            {
-                return colliderLocalTransform.TransformPoint(point);
-            });
-
-        const AZ::Vector3 scale = m_proxyShapeConfiguration.m_cylinder.m_configuration.m_scale;
-        m_proxyShapeConfiguration.m_cylinder.m_configuration = Utils::CreateCookedMeshConfiguration(samplePoints, scale).value();
+         samplePoints.begin(),
+         samplePoints.end(),
+         samplePoints.begin(),
+         [&colliderLocalTransform](const AZ::Vector3& point)
+         {
+             return colliderLocalTransform.TransformPoint(point);
+         });
+        
+        const AZ::Vector3 scale = m_proxyShapeConfiguration.m_cylinder.m_scale;
+        m_proxyShapeConfiguration.m_cylinder = Utils::CreateCookedMeshConfiguration(samplePoints, scale).value();
     }
 
     AZ::Aabb EditorShapeColliderComponent::GetWorldBounds() const
     {
-        return GetAabb();
+        return AZ::Aabb::CreateNull();
     }
 
     AZ::Aabb EditorShapeColliderComponent::GetLocalBounds() const

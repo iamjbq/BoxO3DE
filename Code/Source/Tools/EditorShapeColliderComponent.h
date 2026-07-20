@@ -56,7 +56,7 @@ namespace B3
         EditorProxyShapeConfig() = default;
         EditorProxyShapeConfig(const Physics::ShapeConfiguration& shapeConfiguration);
         
-        Physics::ShapeType m_shapeType = Physics::ShapeType::Box;
+        Physics::ShapeType m_shapeType = Physics::ShapeType::Box; //!< Edit-time shape type
         Physics::SphereShapeConfiguration m_sphere;
         Physics::BoxShapeConfiguration m_box;
         Physics::CapsuleShapeConfiguration m_capsule;
@@ -97,7 +97,7 @@ namespace B3
         , private B3::ColliderShapeRequestBus::Handler
         , private B3::EditorColliderComponentRequestBus::Handler
         , private B3::EditorPrimitiveColliderComponentRequestBus::Handler
-        , private AzPhysics::SimulatedBodyComponentRequestsBus::Handler
+        // , private AzPhysics::SimulatedBodyComponentRequestsBus::Handler
         , public AzFramework::BoundsRequestBus::Handler
     {
     public:
@@ -205,17 +205,20 @@ namespace B3
         AZ::u32 OnConfigurationChanged();
         void UpdateShapeConfigurationScale();
 
+        // TODO: We don't want colliders creating separate rigid bodies
         // AzPhysics::SimulatedBodyComponentRequestsBus::Handler overrides ...
-        void EnablePhysics() override;
-        void DisablePhysics() override;
-        bool IsPhysicsEnabled() const override;
-        AZ::Aabb GetAabb() const override;
-        AzPhysics::SimulatedBody* GetSimulatedBody() override;
-        AzPhysics::SimulatedBodyHandle GetSimulatedBodyHandle() const override;
-        AzPhysics::SceneQueryHit RayCast(const AzPhysics::RayCastRequest& request) override;
+        // void EnablePhysics() override;
+        // void DisablePhysics() override;
+        // bool IsPhysicsEnabled() const override;
+        // AZ::Aabb GetAabb() const override;
+        // AzPhysics::SimulatedBody* GetSimulatedBody() override;
+        // AzPhysics::SimulatedBodyHandle GetSimulatedBodyHandle() const override;
+        // AzPhysics::SceneQueryHit RayCast(const AzPhysics::RayCastRequest& request) override;
 
-        // Cylinder collider
-        void UpdateCylinderCookedMesh();
+        // Update the cylinder collider convex hull
+        void UpdateSphereConvexHull();
+        void UpdateCapsuleConvexHull();
+        void UpdateCylinderConvexHull();
 
         void UpdateCollider();
         void CreateStaticEditorCollider();
@@ -241,7 +244,7 @@ namespace B3
         AZ::NonUniformScaleChangedEvent::Handler m_nonUniformScaleChangedHandler; //!< Responds to changes in non-uniform scale.
         bool m_hasNonUniformScale = false; //!< Whether there is a non-uniform scale component on this entity.
         AZ::Vector3 m_cachedNonUniformScale = AZ::Vector3::CreateOne(); //!< Caches the current non-uniform scale.
-        mutable AZStd::optional<Physics::CookedMeshShapeConfiguration> m_scaledPrimitive; //!< Approximation for non-uniformly scaled primitive.
+        mutable AZStd::optional<Physics::ConvexHullShapeConfiguration> m_scaledPrimitive; //!< Approximation for non-uniformly scaled primitive.
         AZ::Aabb m_cachedAabb = AZ::Aabb::CreateNull(); //!< Cache the Aabb to avoid recalculating it.
         bool m_cachedAabbDirty = true; //!< Track whether the cached Aabb needs to be recomputed.
     };

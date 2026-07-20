@@ -34,13 +34,13 @@ namespace B3
             );
             
 
-        Physics::ShapeType GetShapeType() const override { return Physics::ShapeType::Capsule; }
+        Physics::ShapeType GetShapeType() const override { return Physics::ShapeType::Cylinder; }
         AZStd::shared_ptr<ShapeConfiguration> Clone() const override
         {
             return AZStd::make_shared<CylinderShapeConfiguration>(*this);
         }
-        // TODO: Create B3::Cylinder folowing AZ::Capsule class
-        AZ::Capsule ToCylinder(const AZ::Transform& transform = AZ::Transform::CreateIdentity()) const;
+        
+        // AZ::Capsule ToCylinder(const AZ::Transform& transform = AZ::Transform::CreateIdentity()) const;
         
         float m_height = Physics::ShapeConstants::DefaultCapsuleHeight;
         float m_radius = Physics::ShapeConstants::DefaultCapsuleRadius;

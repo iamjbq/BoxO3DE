@@ -50,7 +50,7 @@ namespace B3
                 else
                 {
                     const Physics::ColliderConfiguration colliderConfigurationUnscaled = collider->GetColliderConfiguration();
-                    auto convexConfig = Utils::CreateConvexFromPrimitive(colliderConfigurationUnscaled, shapeConfiguration,
+                    auto convexConfig = Utils::CreateConvexPointsFromPrimitive(colliderConfigurationUnscaled, shapeConfiguration,
                         shapeConfigurationProxy.m_subdivisionLevel, shapeConfiguration.m_scale);
                     auto colliderConfigurationNoOffset = colliderConfigurationUnscaled;
                     colliderConfigurationNoOffset.m_rotation = AZ::Quaternion::CreateIdentity();

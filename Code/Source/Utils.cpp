@@ -37,8 +37,8 @@ namespace B3
         bool IsPrimitiveShape(const Physics::ShapeConfiguration& shapeConfig)
         {
             const Physics::ShapeType shapeType = shapeConfig.GetShapeType();
+            // box and cylinder are build as convex hulls in Box3D
             return
-                // shapeType == Physics::ShapeType::Box || // TODO: box is a hull in Box3D
                 shapeType == Physics::ShapeType::Capsule ||
                 shapeType == Physics::ShapeType::Sphere;
         }
@@ -131,7 +131,7 @@ namespace B3
                         
                         break;
                     }
-
+                    
                     b3BoxHull box = b3MakeScaledBoxHull(
                         Box3DMathConvert(boxConfig.m_dimensions * 0.5f),
                         Box3DMathConvert(colliderConfiguration.m_position, colliderConfiguration.m_rotation),
@@ -146,9 +146,11 @@ namespace B3
                 {
                     const B3::CylinderShapeConfiguration& cylinderConfig = static_cast<const
                         B3::CylinderShapeConfiguration&>(shapeConfiguration);
-                    float height = cylinderConfig.m_height * cylinderConfig.m_scale.GetZ();
-                    float radius = cylinderConfig.m_radius * AZ::GetMax(cylinderConfig.m_scale.GetX(),
-                                                                       cylinderConfig.m_scale.GetY());
+                    // float height = cylinderConfig.m_height * cylinderConfig.m_scale.GetZ();
+                    // float radius = cylinderConfig.m_radius * AZ::GetMax(cylinderConfig.m_scale.GetX(),
+                    //                                                    cylinderConfig.m_scale.GetY());
+                    float height = cylinderConfig.m_height; // With b3CreateTransformedHullShape we don't need to pre-scale
+                    float radius = cylinderConfig.m_radius;
 
                     if (height <= 0.0f || radius <= 0.0f)
                     {
@@ -159,13 +161,14 @@ namespace B3
                         break;
                     }
                     
-                    // TODO: Unsure what yOffset is in this case
+                    // TODO: Unsure what yOffset is
                     b3HullData* cylinder = b3CreateCylinder(height, radius, 0.0f, cylinderConfig.m_subdivisionCount);
                     if (cylinder == NULL)
                     {
                         // degenerate input: coincident or coplanar points, or insufficient volume
                     }
-                    newShapeId = b3CreateHullShape(bodyId, &shapeDef, cylinder);
+                    b3Transform transform = Box3DMathConvert(colliderConfiguration.m_position, colliderConfiguration.m_rotation);
+                    newShapeId = b3CreateTransformedHullShape(bodyId, &shapeDef, cylinder, transform, Box3DMathConvert(cylinderConfig.m_scale));
                     if (b3Shape_IsValid(newShapeId))
                         success = true;
                     b3DestroyHull(cylinder); // Heap allocated and must be freed manually
@@ -174,6 +177,13 @@ namespace B3
             case Physics::ShapeType::ConvexHull:
                 {
                     const Physics::ConvexHullShapeConfiguration& convexHullConfig = static_cast<const Physics::ConvexHullShapeConfiguration&>(shapeConfiguration);
+                    
+                    if (convexHullConfig.m_vertexCount == 0)
+                    {
+                        AZ_Error("Box3D Utils", false, "Zero vertex points to create hull: %u", convexHullConfig.m_vertexCount)
+                        
+                        break;
+                    }
                     
                     b3HullData* hull = b3CreateHull(
                         static_cast<const b3Vec3*>(convexHullConfig.m_vertexData),
@@ -184,11 +194,13 @@ namespace B3
                     {
                         // degenerate input: coincident or coplanar points, or insufficient volume
                     }
-                    newShapeId = b3CreateHullShape(bodyId, &shapeDef, hull);
+                    b3Transform transform = Box3DMathConvert(colliderConfiguration.m_position, colliderConfiguration.m_rotation);
+                    newShapeId = b3CreateTransformedHullShape(bodyId, &shapeDef, hull, transform, Box3DMathConvert(convexHullConfig.m_scale));
                     if (b3Shape_IsValid(newShapeId))
                         success = true;
                     b3DestroyHull(hull);
                     break;
+                    
                 }
             case Physics::ShapeType::TriangleMesh:
                 {
@@ -204,7 +216,7 @@ namespace B3
                     // // native mesh pointer that gets stored in the configuration.
                     // Physics::CookedMeshShapeConfiguration& cookedMeshShapeConfig =
                     //     const_cast<Physics::CookedMeshShapeConfiguration&>(constCookedMeshShapeConfig);
-
+                    //
                     // physx::PxBase* nativeMeshObject = nullptr;
                     //
                     // // Use the cached mesh object if it is there, otherwise create one and save in the shape configuration
@@ -367,7 +379,7 @@ namespace B3
         //         }
         //         else
         //         {
-        //             auto convexPrimitive = Utils::CreateConvexFromPrimitive(colliderConfiguration, shapeConfiguration, subdivisionLevel, shapeConfiguration.m_scale);
+        //             auto convexPrimitive = Utils::CreateConvexPointsFromPrimitive(colliderConfiguration, shapeConfiguration, subdivisionLevel, shapeConfiguration.m_scale);
         //             if (convexPrimitive.has_value())
         //             {
         //                 if (CreatePxGeometryFromConfig(convexPrimitive.value(), geometryHolder))
@@ -422,24 +434,31 @@ namespace B3
         //     }
         // }
         
-        AZStd::optional<Physics::CookedMeshShapeConfiguration> CreateConvexFromPrimitive(
+        AZStd::optional<Physics::ConvexHullShapeConfiguration> CreateConvexPointsFromPrimitive(
             const Physics::ColliderConfiguration& colliderConfig,
             const Physics::ShapeConfiguration& primitiveShapeConfig, AZ::u8 subdivisionLevel,
-            const AZ::Vector3& scale)
+            [[maybe_unused]] const AZ::Vector3& scale)
         {
             AZ::u8 subdivisionLevelClamped = AZ::GetClamp(subdivisionLevel, MinCapsuleSubdivisionLevel, MaxCapsuleSubdivisionLevel);
 
-            auto applyColliderOffset = [&colliderConfig](const AZ::Vector3 point) {
-                return colliderConfig.m_rotation.TransformVector(point) + colliderConfig.m_position;
+            // auto applyColliderOffset = [&colliderConfig](const AZ::Vector3 point) {
+            //     return colliderConfig.m_rotation.TransformVector(point) + colliderConfig.m_position;
+            // };
+            auto applyColliderOffset = [&colliderConfig](const AZ::Vector3 point) { // TODO: Verify this since we transform/scale at hull creation
+                AZ_UNUSED(colliderConfig)
+                return point;
             };
-
+            
+            Physics::ConvexHullShapeConfiguration convexConfig;
+            
+            AZStd::vector<AZ::Vector3> points;
             auto shapeType = primitiveShapeConfig.GetShapeType();
             switch (shapeType)
             {
             case Physics::ShapeType::Box:
             {
                 auto boxConfig = static_cast<const Physics::BoxShapeConfiguration&>(primitiveShapeConfig);
-                AZStd::vector<AZ::Vector3> points;
+                
                 points.reserve(8);
                 const float x = 0.5f * boxConfig.m_dimensions.GetX();
                 const float y = 0.5f * boxConfig.m_dimensions.GetY();
@@ -452,18 +471,16 @@ namespace B3
                 points.push_back(applyColliderOffset(AZ::Vector3(+x, -y, +z)));
                 points.push_back(applyColliderOffset(AZ::Vector3(+x, +y, -z)));
                 points.push_back(applyColliderOffset(AZ::Vector3(+x, +y, +z)));
-            
-                // b3MakeScaledBoxHull does the same thing
                     
-                return CreateCookedMeshConfiguration(points, scale);
+                convexConfig.m_vertexData = points.data();
+                convexConfig.m_vertexCount = static_cast<AZ::u32>(points.size());
+                return convexConfig;
             }
-            break;
             case Physics::ShapeType::Capsule:
             {
                 auto capsuleConfig = static_cast<const Physics::CapsuleShapeConfiguration&>(primitiveShapeConfig);
                 const AZ::u8 numLayers = subdivisionLevelClamped;
                 const AZ::u8 numPerLayer = 4 * subdivisionLevelClamped;
-                AZStd::vector<AZ::Vector3> points;
                 points.reserve(2 * numLayers * numPerLayer + 2);
                 points.push_back(applyColliderOffset(AZ::Vector3::CreateAxisZ(0.5f * capsuleConfig.m_height)));
                 points.push_back(applyColliderOffset(AZ::Vector3::CreateAxisZ(-0.5f * capsuleConfig.m_height)));
@@ -482,15 +499,15 @@ namespace B3
                     }
                 }
                     
-                return CreateCookedMeshConfiguration(points, scale);
+                convexConfig.m_vertexData = points.data();
+                convexConfig.m_vertexCount = static_cast<AZ::u32>(points.size());
+                return convexConfig;
             }
-            break;
             case Physics::ShapeType::Sphere:
             {
                 auto sphereConfig = static_cast<const Physics::SphereShapeConfiguration&>(primitiveShapeConfig);
                 const AZ::u8 numLayers = 2 * subdivisionLevelClamped;
                 const AZ::u8 numPerLayer = 4 * subdivisionLevelClamped;
-                AZStd::vector<AZ::Vector3> points;
                 points.reserve((numLayers - 1) * numPerLayer + 2);
                 points.push_back(applyColliderOffset(AZ::Vector3::CreateAxisZ(sphereConfig.m_radius)));
                 points.push_back(applyColliderOffset(AZ::Vector3::CreateAxisZ(-sphereConfig.m_radius)));
@@ -507,15 +524,69 @@ namespace B3
                             layerRadius * AZ::Cos(phi), layerRadius * AZ::Sin(phi), layerHeight)));
                     }
                 }
-                return CreateCookedMeshConfiguration(points, scale);
+                    
+                convexConfig.m_vertexData = points.data();
+                convexConfig.m_vertexCount = static_cast<AZ::u32>(points.size());
+                return convexConfig;
             }
-            break;
-            case Physics::ShapeType::CookedMesh:
-                return static_cast<const Physics::CookedMeshShapeConfiguration&>(primitiveShapeConfig);
+            case Physics::ShapeType::ConvexHull:
+                return static_cast<const Physics::ConvexHullShapeConfiguration&>(primitiveShapeConfig);
+            // case Physics::ShapeType::CookedMesh:
+            //     return static_cast<const Physics::CookedMeshShapeConfiguration&>(primitiveShapeConfig);
             default:
-                AZ_Error("Box3D Utils", false, "CreateConvexFromPrimitive was called with a non-primitive shape configuration.")
+                AZ_Error("Box3D Utils", false, "CreateConvexPointsFromPrimitive was called with a non-primitive shape configuration.")
                 return {};
             }
         }
+        
+        // Returns a point list of the frustum extents based on the supplied frustum parameters.
+        AZStd::optional<AZStd::vector<AZ::Vector3>> CreatePointsAtFrustumExtents(float height, float bottomRadius, float topRadius, AZ::u8 subdivisions)
+        {
+            AZStd::vector<AZ::Vector3> points;
+
+            if (height <= 0.0f)
+            {
+                AZ_Error("Box3D", false, "Frustum height %f must be greater than 0.", height);
+                return {};
+            }
+
+            if (bottomRadius < 0.0f)
+            {
+                AZ_Error("Box3D", false, "Frustum bottom radius %f must be greater or equal to 0.", bottomRadius);
+                return {};
+            }
+            else if (topRadius < 0.0f)
+            {
+                AZ_Error("Box3D", false, "Frustum top radius %f must be greater or equal to 0.", topRadius);
+                return {};
+            }
+            else if (bottomRadius == 0.0f && topRadius == 0.0f)
+            {
+                AZ_Error("Box3D", false, "Either frustum bottom radius or top radius must be greater than to 0.");
+                return {};
+            }
+
+            if (subdivisions < MinFrustumSubdivisions || subdivisions > MaxFrustumSubdivisions)
+            {
+                AZ_Error("Box3D", false, "Frustum subdivision count %u is not in [%u, %u] range", subdivisions, MinFrustumSubdivisions, MaxFrustumSubdivisions);
+                return {};
+            }
+
+            points.reserve(subdivisions * 2);
+            const float halfHeight = height * 0.5f;
+            const double step = AZ::Constants::TwoPi / aznumeric_cast<double>(subdivisions);
+
+            for (double rad = 0; rad < AZ::Constants::TwoPi; rad += step)
+            {
+                float x = aznumeric_cast<float>(std::cos(rad));
+                float y = aznumeric_cast<float>(std::sin(rad));
+
+                points.emplace_back(x * topRadius, y * topRadius, +halfHeight);
+                points.emplace_back(x * bottomRadius, y * bottomRadius, -halfHeight);
+            }
+
+            return points;
+        }
+
     }
 }
