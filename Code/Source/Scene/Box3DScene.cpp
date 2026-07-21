@@ -830,7 +830,7 @@ namespace B3
             if (b3Body_IsEnabled(*bodyId))
             {
                 auto pos = b3Body_GetPosition(*bodyId);
-                AZ_Printf("EnableSimulationOfBody", "Body position: %.2f, %.2f, %.2f", pos.x, pos.y, pos.z);
+                // AZ_Printf("EnableSimulationOfBody", "Body position: %.2f, %.2f, %.2f", pos.x, pos.y, pos.z)
             }
         }
         

@@ -156,12 +156,12 @@ namespace B3
     {
         auto shapePtr = AZStd::make_shared<B3::Shape>(colliderConfiguration, configuration);
         
-        if (shapePtr->GetNativePointer())
+        if (shapePtr)
         {
             return shapePtr;
         }
 
-        AZ_Error("Box3D", false, "SystemComponent::CreateShape error. Unable to create a shape from configuration.");
+        AZ_Error("Box3D", false, "SystemComponent::CreateShape error. Unable to create a shape from configuration.")
 
         return nullptr;
     }

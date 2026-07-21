@@ -279,7 +279,7 @@ namespace B3
 
         m_isEntityTransformSetManually = false;
         AZ::Transform transform = rigidBody->GetTransform();
-        AZ_Printf("RigidBodyComponent", "Position: %.2f, %.2f, %.2f", transform.GetTranslation().GetX(), transform.GetTranslation().GetY(), transform.GetTranslation().GetZ())
+        // AZ_Printf("RigidBodyComponent", "Position: %.2f, %.2f, %.2f", transform.GetTranslation().GetX(), transform.GetTranslation().GetY(), transform.GetTranslation().GetZ())
         if (m_configuration.m_interpolateMotion)
         {
             m_interpolator->SetTarget(transform.GetTranslation(), rigidBody->GetOrientation(), fixedDeltaTime);

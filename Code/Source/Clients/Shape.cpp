@@ -62,7 +62,6 @@ namespace B3
             , m_radius(radius)
             , ShapeConfiguration(scale)
             , m_subdivisionCount(subdivisionCount)
-    
     {
     }
 

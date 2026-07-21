@@ -161,8 +161,6 @@ namespace B3
             {
                 SetUserData(configuration.m_customUserData);
             }
-            
-            AZ_Printf("CreateBox3DBody", "Rigid body creation was successful!")
         }
     }
 
@@ -181,7 +179,7 @@ namespace B3
             return;
         }
 
-        if (box3DShape->GetShapeConfiguration()->GetShapeType() == Physics::ShapeType::TriangleMesh || !IsKinematic())
+        if (box3DShape->GetShapeConfiguration()->GetShapeType() == Physics::ShapeType::TriangleMesh) // TODO: || !IsKinematic()
         {
             AZ_Error("Box3D", false, "Cannot use triangle mesh geometry on a dynamic object: %s", GetName().c_str());
             return;
