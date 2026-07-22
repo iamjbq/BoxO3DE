@@ -53,6 +53,8 @@ set(FILES
     Source/Tools/System/ColliderComponentMode.cpp
     Source/Tools/System/ColliderComponentMode.h
     Source/Tools/System/ColliderComponentModeBus.h
+    Source/Tools/System/DebugDraw.cpp
+    Source/Tools/System/DebugDraw.h
         
     Source/Tools/System/ComponentModes/ColliderAssetScaleMode.cpp
     Source/Tools/System/ComponentModes/ColliderAssetScaleMode.h

@@ -131,7 +131,7 @@ namespace B3
                         
                         break;
                     }
-                    
+                    // TODO: we aren't using vertices correctly. Need to create a hull and store all values in ConvexHullConfiguration
                     b3BoxHull box = b3MakeScaledBoxHull(
                         Box3DMathConvert(boxConfig.m_dimensions * 0.5f),
                         Box3DMathConvert(colliderConfiguration.m_position, colliderConfiguration.m_rotation),
@@ -178,9 +178,9 @@ namespace B3
                 {
                     const Physics::ConvexHullShapeConfiguration& convexHullConfig = static_cast<const Physics::ConvexHullShapeConfiguration&>(shapeConfiguration);
                     
-                    if (convexHullConfig.m_vertexCount == 0)
+                    if (convexHullConfig.m_vertexCount < 4)
                     {
-                        AZ_Error("Box3D Utils", false, "Zero vertex points to create hull: %u", convexHullConfig.m_vertexCount)
+                        AZ_Error("Box3D Utils", false, "Insufficient points to create hull: %u", convexHullConfig.m_vertexCount)
                         
                         break;
                     }

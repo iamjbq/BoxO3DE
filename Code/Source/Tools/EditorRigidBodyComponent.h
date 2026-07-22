@@ -15,8 +15,8 @@
 
 #include <BoxO3DE/ColliderComponentBus.h>
 #include <Clients/RigidBody.h>
-// #include <PhysX/Debug/PhysXDebugConfiguration.h>
-// #include <PhysX/Debug/PhysXDebugInterface.h>
+#include <BoxO3DE/Debug/Box3DDebugConfiguration.h>
+#include <BoxO3DE/Debug/Box3DDebugInterface.h>
 
 namespace B3
 {

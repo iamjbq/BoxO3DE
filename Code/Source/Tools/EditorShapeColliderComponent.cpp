@@ -14,6 +14,8 @@
 #include <Utils.h>
 #include <Tools/EditorShapeColliderComponent.h>
 
+#include "BoxO3DE/MathConversions.h"
+
 namespace B3
 {
     // void EditorProxyCylinderShapeConfig::Reflect(AZ::ReflectContext* context)
@@ -133,7 +135,7 @@ namespace B3
     void EditorShapeColliderComponent::Reflect(AZ::ReflectContext* context)
     {
         EditorProxyShapeConfig::Reflect(context);
-        // DebugDraw::Collider::Reflect(context);
+        DebugDraw::Collider::Reflect(context);
 
         if (auto serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
         {
@@ -141,7 +143,7 @@ namespace B3
                 ->Version(1 + (1<<b3GetVersion().major)) // Use Box3D version to trigger prefabs recompilation when version is updated.
                 ->Field("ColliderConfiguration", &EditorShapeColliderComponent::m_configuration)
                 ->Field("ShapeConfiguration", &EditorShapeColliderComponent::m_proxyShapeConfiguration)
-                // ->Field("DebugDrawSettings", &EditorShapeColliderComponent::m_colliderDebugDraw)
+                ->Field("DebugDrawSettings", &EditorShapeColliderComponent::m_colliderDebugDraw)
                 ->Field("ComponentMode", &EditorShapeColliderComponent::m_componentModeDelegate)
                 ->Field("HasNonUniformScale", &EditorShapeColliderComponent::m_hasNonUniformScale)
                 ;
@@ -165,9 +167,9 @@ namespace B3
                     ->Attribute(AZ::Edit::Attributes::ChangeNotify, &EditorShapeColliderComponent::OnConfigurationChanged)
                     ->DataElement(AZ::Edit::UIHandlers::Default, &EditorShapeColliderComponent::m_componentModeDelegate, "Component Mode", "Collider Component Mode.")
                     ->Attribute(AZ::Edit::Attributes::Visibility, AZ::Edit::PropertyVisibility::ShowChildrenOnly)
-                    // ->DataElement(AZ::Edit::UIHandlers::Default, &EditorShapeColliderComponent::m_colliderDebugDraw,
-                    //     "Debug draw settings", "Debug draw settings.")
-                    // ->Attribute(AZ::Edit::Attributes::Visibility, AZ::Edit::PropertyVisibility::ShowChildrenOnly)
+                    ->DataElement(AZ::Edit::UIHandlers::Default, &EditorShapeColliderComponent::m_colliderDebugDraw,
+                        "Debug draw settings", "Debug draw settings.")
+                    ->Attribute(AZ::Edit::Attributes::Visibility, AZ::Edit::PropertyVisibility::ShowChildrenOnly)
                     ;
             }
         }
@@ -209,7 +211,7 @@ namespace B3
 
     bool EditorShapeColliderComponent::IsDebugDrawDisplayFlagEnabled() const
     {
-        // return m_colliderDebugDraw.IsDisplayFlagEnabled();
+        return m_colliderDebugDraw.IsDisplayFlagEnabled();
         return false;
     }
 
@@ -230,14 +232,14 @@ namespace B3
         case Physics::ShapeType::Cylinder:
             m_cylinder = static_cast<const B3::CylinderShapeConfiguration&>(shapeConfiguration);
             break;
-        case Physics::ShapeType::ConvexHull:
-            m_convexHull = static_cast<const Physics::ConvexHullShapeConfiguration&>(shapeConfiguration);
-            break;
+        // case Physics::ShapeType::ConvexHull:
+        //     m_convexHull = static_cast<const Physics::ConvexHullShapeConfiguration&>(shapeConfiguration);
+        //     break;
         case Physics::ShapeType::CookedMesh:
             m_cookedMesh = static_cast<const Physics::CookedMeshShapeConfiguration&>(shapeConfiguration);
             break;
         default:
-            AZ_Warning("EditorProxyShapeConfig", false, "Invalid shape type!");
+            AZ_Warning("EditorProxyShapeConfig", false, "Invalid shape type!")
         }
     }
 
@@ -278,12 +280,12 @@ namespace B3
             return m_capsule;
         case Physics::ShapeType::Cylinder:
             return m_cylinder;
-        case Physics::ShapeType::ConvexHull:
-            return m_convexHull;
+        // case Physics::ShapeType::ConvexHull:
+        //     return m_convexHull;
         case Physics::ShapeType::CookedMesh:
             return m_cookedMesh;
         default:
-            AZ_Warning("EditorProxyShapeConfig", false, "Unsupported shape type");
+            AZ_Warning("EditorProxyShapeConfig", false, "Unsupported shape type")
             return m_box;
         }
     }
@@ -298,12 +300,12 @@ namespace B3
             return AZStd::make_shared<Physics::CapsuleShapeConfiguration>(m_capsule);
         case Physics::ShapeType::Cylinder:
             return AZStd::make_shared<B3::CylinderShapeConfiguration>(m_cylinder);
-        case Physics::ShapeType::ConvexHull:
-            return AZStd::make_shared<Physics::ConvexHullShapeConfiguration>(m_convexHull);
+        // case Physics::ShapeType::ConvexHull:
+        //     return AZStd::make_shared<Physics::ConvexHullShapeConfiguration>(m_convexHull);
         case Physics::ShapeType::CookedMesh:
             return AZStd::make_shared<Physics::CookedMeshShapeConfiguration>(m_cookedMesh);
         default:
-            AZ_Warning("EditorProxyShapeConfig", false, "Unsupported shape type, defaulting to Box.");
+            AZ_Warning("EditorProxyShapeConfig", false, "Unsupported shape type, defaulting to Box.")
             [[fallthrough]];
         case Physics::ShapeType::Box:
             return AZStd::make_shared<Physics::BoxShapeConfiguration>(m_box);
@@ -369,8 +371,8 @@ namespace B3
         }
 
         // Debug drawing
-        // m_colliderDebugDraw.Connect(entityId);
-        // m_colliderDebugDraw.SetDisplayCallback(this);
+        m_colliderDebugDraw.Connect(entityId);
+        m_colliderDebugDraw.SetDisplayCallback(this);
 
         // ComponentMode
         m_componentModeDelegate.ConnectWithSingleComponentMode<
@@ -383,7 +385,7 @@ namespace B3
     void EditorShapeColliderComponent::Deactivate()
     {
         // AzPhysics::SimulatedBodyComponentRequestsBus::Handler::BusDisconnect();
-        // m_colliderDebugDraw.Disconnect();
+        m_colliderDebugDraw.Disconnect();
         m_nonUniformScaleChangedHandler.Disconnect();
         AzToolsFramework::EditorComponentSelectionRequestsBus::Handler::BusDisconnect();
         AzFramework::BoundsRequestBus::Handler::BusDisconnect();
@@ -583,98 +585,98 @@ namespace B3
 
     void EditorShapeColliderComponent::BuildDebugDrawMesh() const
     {
-        // const AZ::u32 shapeIndex = 0; // Only one mesh gets built from the primitive collider, hence use geomIndex 0.
-        // if (m_proxyShapeConfiguration.IsCylinderConfig())
-        // {
-        //     physx::PxGeometryHolder pxGeometryHolder;
-        //     Utils::CreatePxGeometryFromConfig( // This takes the points created from FrustumExtents and builds geometry
-        //         m_proxyShapeConfiguration.m_cylinder.m_configuration, pxGeometryHolder); // this will cause the native mesh to be cached
-        //     m_colliderDebugDraw.BuildMeshes(m_proxyShapeConfiguration.m_cylinder.m_configuration, shapeIndex);
-        // }
-        // else if (!m_hasNonUniformScale)
-        // {
-        //     m_colliderDebugDraw.BuildMeshes(m_proxyShapeConfiguration.GetCurrent(), shapeIndex);
-        // }
-        // else
-        // {
-        //     m_scaledPrimitive = Utils::CreateConvexPointsFromPrimitive(GetColliderConfiguration(), m_proxyShapeConfiguration.GetCurrent(),
-        //         m_proxyShapeConfiguration.m_subdivisionLevel, m_proxyShapeConfiguration.GetCurrent().m_scale);
-        //     if (m_scaledPrimitive.has_value())
-        //     {
-        //         physx::PxGeometryHolder pxGeometryHolder;
-        //         Utils::CreatePxGeometryFromConfig(m_scaledPrimitive.value(), pxGeometryHolder); // this will cause the native mesh to be cached
-        //         m_colliderDebugDraw.BuildMeshes(m_scaledPrimitive.value(), shapeIndex);
-        //     }
-        // }
+        const AZ::u32 shapeIndex = 0; // Only one mesh gets built from the primitive collider, hence use geomIndex 0.
+        if (m_proxyShapeConfiguration.IsCylinderConfig())
+        {
+            physx::PxGeometryHolder pxGeometryHolder;
+            Utils::CreatePxGeometryFromConfig( // This takes the points created from FrustumExtents and builds geometry
+                m_proxyShapeConfiguration.m_cylinder.m_configuration, pxGeometryHolder); // this will cause the native mesh to be cached
+            m_colliderDebugDraw.BuildMeshes(m_proxyShapeConfiguration.m_cylinder, shapeIndex);
+        }
+        else if (!m_hasNonUniformScale)
+        {
+            m_colliderDebugDraw.BuildMeshes(m_proxyShapeConfiguration.GetCurrent(), shapeIndex);
+        }
+        else
+        {
+            m_scaledPrimitive = Utils::CreateConvexPointsFromPrimitive(GetColliderConfiguration(), m_proxyShapeConfiguration.GetCurrent(),
+                m_proxyShapeConfiguration.m_subdivisionLevel, m_proxyShapeConfiguration.GetCurrent().m_scale);
+            if (m_scaledPrimitive.has_value())
+            {
+                physx::PxGeometryHolder pxGeometryHolder;
+                Utils::CreatePxGeometryFromConfig(m_scaledPrimitive.value(), pxGeometryHolder); // this will cause the native mesh to be cached
+                m_colliderDebugDraw.BuildMeshes(m_scaledPrimitive.value(), shapeIndex);
+            }
+        }
     }
 
-    // void EditorShapeColliderComponent::DisplayCylinderCollider(AzFramework::DebugDisplayRequests& debugDisplay) const
-    // {
-    //     const AZ::u32 shapeIndex = 0;
-    //     m_colliderDebugDraw.DrawMesh(
-    //         debugDisplay,
-    //         GetColliderConfigurationNoOffset(),
-    //         m_proxyShapeConfiguration.m_cylinder.m_configuration,
-    //         m_proxyShapeConfiguration.m_cylinder.m_configuration.m_scale,
-    //         shapeIndex);
-    // }
-    //
-    // void EditorShapeColliderComponent::DisplayScaledPrimitiveCollider(AzFramework::DebugDisplayRequests& debugDisplay) const
-    // {
-    //     if (m_scaledPrimitive.has_value())
-    //     {
-    //         const AZ::u32 shapeIndex = 0;
-    //         Physics::ColliderConfiguration colliderConfigNoOffset = m_configuration;
-    //         colliderConfigNoOffset.m_rotation = AZ::Quaternion::CreateIdentity();
-    //         colliderConfigNoOffset.m_position = AZ::Vector3::CreateZero();
-    //         m_colliderDebugDraw.DrawMesh(debugDisplay, colliderConfigNoOffset, m_scaledPrimitive.value(),
-    //             GetWorldTM().GetUniformScale() * m_cachedNonUniformScale, shapeIndex);
-    //     }
-    // }
+    void EditorShapeColliderComponent::DisplayCylinderCollider(AzFramework::DebugDisplayRequests& debugDisplay) const
+    {
+        const AZ::u32 shapeIndex = 0;
+        m_colliderDebugDraw.DrawMesh(
+            debugDisplay,
+            GetColliderConfigurationNoOffset(),
+            m_proxyShapeConfiguration.m_cylinder.m_configuration,
+            m_proxyShapeConfiguration.m_cylinder.m_configuration.m_scale,
+            shapeIndex);
+    }
+    
+    void EditorShapeColliderComponent::DisplayScaledPrimitiveCollider(AzFramework::DebugDisplayRequests& debugDisplay) const
+    {
+        if (m_scaledPrimitive.has_value())
+        {
+            const AZ::u32 shapeIndex = 0;
+            Physics::ColliderConfiguration colliderConfigNoOffset = m_configuration;
+            colliderConfigNoOffset.m_rotation = AZ::Quaternion::CreateIdentity();
+            colliderConfigNoOffset.m_position = AZ::Vector3::CreateZero();
+            m_colliderDebugDraw.DrawMesh(debugDisplay, colliderConfigNoOffset, m_scaledPrimitive.value(),
+                GetWorldTM().GetUniformScale() * m_cachedNonUniformScale, shapeIndex);
+        }
+    }
 
-    // void EditorShapeColliderComponent::DisplayUnscaledPrimitiveCollider(AzFramework::DebugDisplayRequests& debugDisplay) const
-    // {
-    //     switch (m_proxyShapeConfiguration.m_shapeType)
-    //     {
-    //     case Physics::ShapeType::Sphere:
-    //         m_colliderDebugDraw.DrawSphere(debugDisplay, m_configuration, m_proxyShapeConfiguration.m_sphere);
-    //         break;
-    //     case Physics::ShapeType::Box:
-    //         m_colliderDebugDraw.DrawBox(debugDisplay, m_configuration, m_proxyShapeConfiguration.m_box);
-    //         break;
-    //     case Physics::ShapeType::Capsule:
-    //         m_colliderDebugDraw.DrawCapsule(debugDisplay, m_configuration, m_proxyShapeConfiguration.m_capsule);
-    //         break;
-    //     }
-    // }
-    //
-    // void EditorShapeColliderComponent::Display([[maybe_unused]] const AzFramework::ViewportInfo& viewportInfo,
-    //     AzFramework::DebugDisplayRequests& debugDisplay) const
-    // {
-    //     if (!m_colliderDebugDraw.HasCachedGeometry())
-    //     {
-    //         BuildDebugDrawMesh();
-    //     }
-    //
-    //     if (m_colliderDebugDraw.HasCachedGeometry())
-    //     {
-    //         if (m_proxyShapeConfiguration.IsCylinderConfig())
-    //         {
-    //             DisplayCylinderCollider(debugDisplay);
-    //         }
-    //         else 
-    //         {
-    //             if (m_hasNonUniformScale)
-    //             {
-    //                 DisplayScaledPrimitiveCollider(debugDisplay);
-    //             }
-    //             else
-    //             {
-    //                 DisplayUnscaledPrimitiveCollider(debugDisplay);
-    //             }
-    //         }
-    //     }
-    // }
+    void EditorShapeColliderComponent::DisplayUnscaledPrimitiveCollider(AzFramework::DebugDisplayRequests& debugDisplay) const
+    {
+        switch (m_proxyShapeConfiguration.m_shapeType)
+        {
+        case Physics::ShapeType::Sphere:
+            m_colliderDebugDraw.DrawSphere(debugDisplay, m_configuration, m_proxyShapeConfiguration.m_sphere);
+            break;
+        case Physics::ShapeType::Box:
+            m_colliderDebugDraw.DrawBox(debugDisplay, m_configuration, m_proxyShapeConfiguration.m_box);
+            break;
+        case Physics::ShapeType::Capsule:
+            m_colliderDebugDraw.DrawCapsule(debugDisplay, m_configuration, m_proxyShapeConfiguration.m_capsule);
+            break;
+        }
+    }
+    
+    void EditorShapeColliderComponent::Display([[maybe_unused]] const AzFramework::ViewportInfo& viewportInfo,
+        AzFramework::DebugDisplayRequests& debugDisplay) const
+    {
+        if (!m_colliderDebugDraw.HasCachedGeometry())
+        {
+            BuildDebugDrawMesh();
+        }
+    
+        if (m_colliderDebugDraw.HasCachedGeometry())
+        {
+            if (m_proxyShapeConfiguration.IsCylinderConfig())
+            {
+                DisplayCylinderCollider(debugDisplay);
+            }
+            else 
+            {
+                if (m_hasNonUniformScale)
+                {
+                    DisplayScaledPrimitiveCollider(debugDisplay);
+                }
+                else
+                {
+                    DisplayUnscaledPrimitiveCollider(debugDisplay);
+                }
+            }
+        }
+    }
 
     AZ::Vector3 EditorShapeColliderComponent::GetDimensions() const
     {
@@ -1058,19 +1060,36 @@ namespace B3
         }
         
         AZStd::vector<AZ::Vector3> samplePoints = Utils::CreatePointsAtFrustumExtents(height, radius, radius, subdivisionCount).value();
-
+        
+        // Convert to native b3Vec3 array and create hull
+        AZStd::vector<b3Vec3> b3Points;
+        b3Points.reserve(samplePoints.size());
+        int size = static_cast<int>(b3Points.size());
+        
+        for (const auto& point : samplePoints)
+        {
+            b3Points.push_back(Box3DMathConvert(point));
+        }
+        
         const AZ::Transform colliderLocalTransform = GetColliderLocalTransform();
+        [[maybe_unused]] const AZ::Vector3 scale = m_proxyShapeConfiguration.m_cylinder.m_scale;
+        
+        // TODO: Which one to use? I don't want to duplicate work, or scale twice. Reuse as much as possible
+        // b3HullData* cylinder = b3CreateHull(b3Points.data(), size, size);
+        b3HullData* newCylinder = b3CreateCylinder(height, radius, 0.0f, subdivisionCount);
+        b3HullData* scaledCylinder = b3CloneAndTransformHull(newCylinder, Box3DMathConvert(colliderLocalTransform), Box3DMathConvert(scale)); // also an option if we don't want to scale here
 
         AZStd::transform(
          samplePoints.begin(),
          samplePoints.end(),
          samplePoints.begin(),
-         [&colliderLocalTransform](const AZ::Vector3& point)
+         [&colliderLocalTransform, &scale](const AZ::Vector3& point)
          {
-             return colliderLocalTransform.TransformPoint(point);
+             return colliderLocalTransform.TransformPoint(point * scale);
          });
         
-        [[maybe_unused]] const AZ::Vector3 scale = m_proxyShapeConfiguration.m_cylinder.m_scale;
+        m_proxyShapeConfiguration.m_cookedMesh.SetCachedNativeMesh(cylinder);
+        
         // m_proxyShapeConfiguration.m_cylinder = Utils::CreateCookedMeshConfiguration(samplePoints, scale).value();
     }
 

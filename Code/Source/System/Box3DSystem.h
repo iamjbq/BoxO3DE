@@ -8,7 +8,7 @@
 #include <AzFramework/Physics/Configuration/SystemConfiguration.h>
 
 #include <Configuration/Box3DSettingsRegistryManager.h>
-// #include <Debug/PhysXDebug.h>
+// #include <Debug/Box3DDebug.h>
 #include <Scene/Box3DSceneInterface.h>
 // #include <System/PhysXAllocator.h>
 // #include <System/PhysXSdkCallbacks.h>
@@ -110,7 +110,7 @@ namespace B3
         };
         State m_state = State::Uninitialized;
 
-        // Debug::PhysXDebug m_physXDebug; //! Handler for the PhysXDebug Interface.
+        // Debug::Box3DDebug m_physXDebug; //! Handler for the Box3DDebug Interface.
         AZStd::unique_ptr<Box3DSettingsRegistryManager> m_registryManager; //! Handles all settings registry interactions.
         Box3DSceneInterface m_sceneInterface; //! Implemented the Scene Az::Interface.
         // PhysXJointHelpersInterface m_jointHelperInterface; //! Implementation of the JointHelpersInterface.

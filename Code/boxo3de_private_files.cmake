@@ -12,6 +12,8 @@ set(FILES
     Include/BoxO3DE/EditorColliderComponentRequestBus.h
     Include/BoxO3DE/Material/Box3DMaterial.h
     Include/BoxO3DE/Material/Box3DMaterialConfiguration.h
+    Include/BoxO3DE/Debug/Box3DDebugConfiguration.h
+    Include/BoxO3DE/Debug/Box3DDebugInterface.h
     
     Source/BoxO3DEModule.cpp
     Source/BoxO3DEModule.h
@@ -20,6 +22,10 @@ set(FILES
         
     Source/Common/Box3DSceneQueryHelpers.cpp
     Source/Common/Box3DSceneQueryHelpers.h
+        
+    Source/Debug/Box3DDebugConfiguration.cpp
+    Source/Debug/Box3DDebug.cpp
+    Source/Debug/Box3DDebug.h
         
     Source/Clients/BoxO3DESystemComponent.cpp
     Source/Clients/BoxO3DESystemComponent.h

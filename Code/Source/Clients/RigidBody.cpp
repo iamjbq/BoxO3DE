@@ -8,6 +8,7 @@
 #include <AzCore/Math/MathStringConversions.h>
 #include <AzFramework/Physics/Utils.h>
 #include <AzFramework/Physics/Configuration/RigidBodyConfiguration.h>
+
 #include <BoxO3DE/NativeTypeIdentifiers.h>
 #include <BoxO3DE/MathConversions.h>
 #include <Utils.h>
@@ -15,8 +16,7 @@
 #include <Clients/Shape.h>
 #include <BoxO3DE/Material/Box3DMaterial.h>
 #include <Common/Box3DSceneQueryHelpers.h>
-
-#include "System/Box3DSystem.h"
+#include <System/Box3DSystem.h>
 
 namespace B3
 {

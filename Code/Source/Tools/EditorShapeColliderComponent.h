@@ -20,7 +20,7 @@
 #include <BoxO3DE/EditorColliderComponentRequestBus.h>
 #include <Clients/Shape.h>
 
-// #include <Editor/DebugDraw.h>
+#include <Tools/System/DebugDraw.h>
 
 namespace AzPhysics
 {
@@ -38,13 +38,14 @@ namespace B3
     //     static void Reflect(AZ::ReflectContext* context);
     //
     //     //! Cylinder specific parameters.
-    AZ::u8 m_subdivisionCount = Physics::ShapeConstants::DefaultCylinderSubdivisionCount;
     //     float m_height = Physics::ShapeConstants::DefaultCylinderHeight;
     //     float m_radius = Physics::ShapeConstants::DefaultCylinderRadius;
     //
     //     //! Configuration stores the convex geometry for the cylinder and shape scale.
     //     Physics::ConvexHullShapeConfiguration m_configuration;
     // };
+    
+    AZ::u8 m_subdivisionCount = Physics::ShapeConstants::DefaultCylinderSubdivisionCount;
 
     //! Proxy container for only displaying a specific shape configuration depending on the shapeType selected.
     struct EditorProxyShapeConfig
@@ -63,7 +64,7 @@ namespace B3
         B3::CylinderShapeConfiguration m_cylinder;
         bool m_hasNonUniformScale = false; //!< Whether there is a non-uniform scale component on this entity.
         AZ::u8 m_subdivisionLevel = 4; //!< The level of subdivision if a primitive shape is replaced with a convex mesh due to scaling.
-        Physics::ConvexHullShapeConfiguration m_convexHull;
+        // Physics::ConvexHullShapeConfiguration m_convexHull;
         Physics::CookedMeshShapeConfiguration m_cookedMesh;
 
         bool IsSphereConfig() const;
@@ -89,7 +90,7 @@ namespace B3
     class EditorShapeColliderComponent
         : public AzToolsFramework::Components::EditorComponentBase
         , public AzToolsFramework::EditorComponentSelectionRequestsBus::Handler
-        // , protected DebugDraw::DisplayCallback
+        , protected DebugDraw::DisplayCallback
         , protected AzToolsFramework::EntitySelectionEvents::Bus::Handler
         , private AzToolsFramework::BoxManipulatorRequestBus::Handler
         , private AzToolsFramework::ShapeManipulatorRequestBus::Handler
@@ -147,8 +148,8 @@ namespace B3
         void OnDeselected() override;
 
         // DisplayCallback overrides ...
-        // void Display(const AzFramework::ViewportInfo& viewportInfo,
-        //     AzFramework::DebugDisplayRequests& debugDisplay) const override;
+        void Display(const AzFramework::ViewportInfo& viewportInfo,
+            AzFramework::DebugDisplayRequests& debugDisplay) const override;
 
         void DisplayCylinderCollider(AzFramework::DebugDisplayRequests& debugDisplay) const;
         void DisplayUnscaledPrimitiveCollider(AzFramework::DebugDisplayRequests& debugDisplay) const;
@@ -236,7 +237,7 @@ namespace B3
         AzPhysics::SceneHandle m_editorSceneHandle = AzPhysics::InvalidSceneHandle;
         AzPhysics::SimulatedBodyHandle m_editorBodyHandle = AzPhysics::InvalidSimulatedBodyHandle;
 
-        // DebugDraw::Collider m_colliderDebugDraw;
+        DebugDraw::Collider m_colliderDebugDraw;
 
         AzPhysics::SystemEvents::OnConfigurationChangedEvent::Handler m_box3DConfigChangedHandler;
         AZ::Transform m_cachedWorldTransform;
@@ -244,7 +245,7 @@ namespace B3
         AZ::NonUniformScaleChangedEvent::Handler m_nonUniformScaleChangedHandler; //!< Responds to changes in non-uniform scale.
         bool m_hasNonUniformScale = false; //!< Whether there is a non-uniform scale component on this entity.
         AZ::Vector3 m_cachedNonUniformScale = AZ::Vector3::CreateOne(); //!< Caches the current non-uniform scale.
-        mutable AZStd::optional<Physics::ConvexHullShapeConfiguration> m_scaledPrimitive; //!< Approximation for non-uniformly scaled primitive.
+        mutable AZStd::optional<Physics::CookedMeshShapeConfiguration> m_scaledPrimitive; //!< Approximation for non-uniformly scaled primitive.
         AZ::Aabb m_cachedAabb = AZ::Aabb::CreateNull(); //!< Cache the Aabb to avoid recalculating it.
         bool m_cachedAabbDirty = true; //!< Track whether the cached Aabb needs to be recomputed.
     };
