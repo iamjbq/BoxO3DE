@@ -16,6 +16,8 @@
 #include <Tools/System/Box3DEditorMaterialAsset.h>
 #include <System/Box3DSystem.h>
 
+#include "System/ColliderComponentMode.h"
+
 namespace B3
 {
     AZ_COMPONENT_IMPL(BoxO3DEEditorSystemComponent, "BoxO3DEEditorSystemComponent",
@@ -23,6 +25,7 @@ namespace B3
 
     void BoxO3DEEditorSystemComponent::Reflect(AZ::ReflectContext* context)
     {
+        ColliderComponentMode::Reflect(context);
         EditorMaterialAsset::Reflect(context);
         
         if (auto serializeContext = azrtti_cast<AZ::SerializeContext*>(context))

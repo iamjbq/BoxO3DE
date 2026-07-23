@@ -20,20 +20,20 @@ namespace B3
         }
 
         void SettingsWidget::SetValue(const B3::Box3DSystemConfiguration& box3DSystemConfiguration,
-            const AzPhysics::SceneConfiguration& defaultSceneConfiguration
-            // const Debug::DebugDisplayData& debugDisplayData
+            const AzPhysics::SceneConfiguration& defaultSceneConfiguration,
+            const Debug::DebugDisplayData& debugDisplayData
             )
         {
             m_box3DSystemConfiguration = box3DSystemConfiguration;
             m_defaultSceneConfiguration = defaultSceneConfiguration;
-            // m_debugDisplayData = debugDisplayData;
+            m_debugDisplayData = debugDisplayData;
 
             blockSignals(true);
             m_propertyEditor->ClearInstances();
             m_propertyEditor->AddInstance(&m_box3DSystemConfiguration.m_capacityConfiguration);
             m_propertyEditor->AddInstance(&m_box3DSystemConfiguration);
             m_propertyEditor->AddInstance(&m_defaultSceneConfiguration);
-            // m_propertyEditor->AddInstance(&m_debugDisplayData);
+            m_propertyEditor->AddInstance(&m_debugDisplayData);
             m_propertyEditor->InvalidateAll();
             blockSignals(false);
         }
@@ -75,8 +75,8 @@ namespace B3
         void SettingsWidget::SetPropertyEditingComplete(AzToolsFramework::InstanceDataNode* /*node*/)
         {
             emit onValueChanged(m_box3DSystemConfiguration,
-                m_defaultSceneConfiguration
-                // m_debugDisplayData
+                m_defaultSceneConfiguration,
+                m_debugDisplayData
             );
         }
 

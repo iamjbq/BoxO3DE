@@ -9,7 +9,7 @@
 #endif
 
 #include <QWidget>
-// #include <BoxO3DE/Debug/Box3DDebugInterface.h>
+#include <BoxO3DE/Debug/Box3DDebugInterface.h>
 
 namespace B3
 {
@@ -29,14 +29,14 @@ namespace B3
             explicit SettingsWidget(QWidget* parent = nullptr);
 
             void SetValue(const B3::Box3DSystemConfiguration& box3DSystemConfiguration,
-                const AzPhysics::SceneConfiguration& defaultSceneConfiguration
-                // const Debug::DebugDisplayData& debugDisplayData
+                const AzPhysics::SceneConfiguration& defaultSceneConfiguration,
+                const Debug::DebugDisplayData& debugDisplayData
                 );
 
         signals:
             void onValueChanged(const B3::Box3DSystemConfiguration& box3DSystemConfiguration,
-                const AzPhysics::SceneConfiguration& defaultSceneConfiguration
-                // const B3::Debug::DebugDisplayData& debugDisplayData
+                const AzPhysics::SceneConfiguration& defaultSceneConfiguration,
+                const B3::Debug::DebugDisplayData& debugDisplayData
                 );
 
         private:
@@ -52,7 +52,7 @@ namespace B3
             DocumentationLinkWidget* m_documentationLinkWidget;
             B3::Box3DSystemConfiguration m_box3DSystemConfiguration;
             AzPhysics::SceneConfiguration m_defaultSceneConfiguration;
-            // B3::Debug::DebugDisplayData m_debugDisplayData;
+            B3::Debug::DebugDisplayData m_debugDisplayData;
         };
     }
 } // B3

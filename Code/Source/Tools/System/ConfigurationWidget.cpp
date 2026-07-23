@@ -37,15 +37,15 @@ namespace B3
 
             connect(m_settings, &SettingsWidget::onValueChanged,
                 this, [this](const B3::Box3DSystemConfiguration& box3DSystemConfiguration,
-                            const AzPhysics::SceneConfiguration& defaultSceneConfiguration
-                             // const Debug::DebugDisplayData& debugDisplayData
+                            const AzPhysics::SceneConfiguration& defaultSceneConfiguration,
+                             const Debug::DebugDisplayData& debugDisplayData
                              )
             {
                 m_box3DSystemConfiguration = box3DSystemConfiguration;
                 m_defaultSceneConfiguration = defaultSceneConfiguration;
-                // m_box3DDebugConfiguration.m_debugDisplayData = debugDisplayData;
+                m_box3DDebugConfiguration.m_debugDisplayData = debugDisplayData;
                 emit onConfigurationChanged(m_box3DSystemConfiguration,
-                    // m_box3DDebugConfiguration,
+                    m_box3DDebugConfiguration,
                     m_defaultSceneConfiguration);
             });
 
@@ -55,7 +55,7 @@ namespace B3
                 m_box3DSystemConfiguration.m_collisionConfig.m_collisionLayers = layers;
                 m_box3DSystemConfiguration.m_collisionConfig.m_collisionGroups = groups;
                 emit onConfigurationChanged(m_box3DSystemConfiguration,
-                    // m_box3DDebugConfiguration,
+                    m_box3DDebugConfiguration,
                     m_defaultSceneConfiguration);
             });
 
@@ -76,15 +76,15 @@ namespace B3
 
         void ConfigurationWidget::SetConfiguration(
             const B3::Box3DSystemConfiguration& box3DSystemConfiguration,
-            // const B3::Debug::DebugConfiguration& box3DDebugConfiguration,
+            const B3::Debug::DebugConfiguration& box3DDebugConfiguration,
             const AzPhysics::SceneConfiguration& defaultSceneConfiguration)
         {
             m_box3DSystemConfiguration = box3DSystemConfiguration;
             m_defaultSceneConfiguration = defaultSceneConfiguration;
-            // m_box3DDebugConfiguration = box3DDebugConfiguration;
+            m_box3DDebugConfiguration = box3DDebugConfiguration;
             m_settings->SetValue(m_box3DSystemConfiguration,
-                m_defaultSceneConfiguration
-                // m_box3DDebugConfiguration.m_debugDisplayData
+                m_defaultSceneConfiguration,
+                m_box3DDebugConfiguration.m_debugDisplayData
                 );
             m_collisionFiltering->SetConfiguration(m_box3DSystemConfiguration.m_collisionConfig.m_collisionLayers, m_box3DSystemConfiguration.m_collisionConfig.m_collisionGroups);
             // m_pvd->SetValue(m_box3DDebugConfiguration.m_pvdConfigurationData);

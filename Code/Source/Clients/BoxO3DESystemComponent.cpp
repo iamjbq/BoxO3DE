@@ -21,6 +21,7 @@ namespace B3
     void BoxO3DESystemComponent::Reflect(AZ::ReflectContext* context)
     {
         Box3DSystemConfiguration::Reflect(context);
+        Debug::DebugConfiguration::Reflect(context);
         MaterialConfiguration::Reflect(context);
         
         if (auto serializeContext = azrtti_cast<AZ::SerializeContext*>(context))
@@ -325,27 +326,27 @@ namespace B3
                 registryManager.SaveDefaultSceneConfiguration(defaultConfig, saveCallback);
             }
             
-            //load the debug configuration and initialize the Box3D debug interface
-            // if (auto* debug = AZ::Interface<Debug::Box3DDebugInterface>::Get())
-            // {
-            //     if (AZStd::optional<Debug::DebugConfiguration> config = registryManager.LoadDebugConfiguration();
-            //         config.has_value())
-            //     {
-            //         debug->Initialize(*config);
-            //     }
-            //     else //load defaults if there is no config
-            //     {
-            //         const Debug::DebugConfiguration defaultConfig = Debug::DebugConfiguration::CreateDefault();
-            //         debug->Initialize(defaultConfig);
-            //
-            //         auto saveCallback = []([[maybe_unused]] const Debug::DebugConfiguration& config, [[maybe_unused]] Box3DSettingsRegistryManager::Result result)
-            //         {
-            //             AZ_Warning("Box3D", result == Box3DSettingsRegistryManager::Result::Success,
-            //                 "Unable to save the default Box3D Debug configuration.");
-            //         };
-            //         registryManager.SaveDebugConfiguration(defaultConfig, saveCallback);
-            //     }
-            // }
+            // load the debug configuration and initialize the Box3D debug interface
+             if (auto* debug = AZ::Interface<Debug::Box3DDebugInterface>::Get())
+             {
+                 if (AZStd::optional<Debug::DebugConfiguration> config = registryManager.LoadDebugConfiguration();
+                     config.has_value())
+                 {
+                     debug->Initialize(*config);
+                 }
+                 else //load defaults if there is no config
+                 {
+                     const Debug::DebugConfiguration defaultConfig = Debug::DebugConfiguration::CreateDefault();
+                     debug->Initialize(defaultConfig);
+            
+                     auto saveCallback = []([[maybe_unused]] const Debug::DebugConfiguration& config, [[maybe_unused]] Box3DSettingsRegistryManager::Result result)
+                     {
+                         AZ_Warning("Box3D", result == Box3DSettingsRegistryManager::Result::Success,
+                             "Unable to save the default Box3D Debug configuration.");
+                     };
+                     registryManager.SaveDebugConfiguration(defaultConfig, saveCallback);
+                 }
+             }
         }
         
         m_materialManager = AZStd::make_unique<MaterialManager>();

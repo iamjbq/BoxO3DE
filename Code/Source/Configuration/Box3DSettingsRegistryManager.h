@@ -19,7 +19,7 @@ namespace B3
         
         using OnBox3DConfigSaveComplete = AZStd::function<void(const Box3DSystemConfiguration&, Result)>;
         using OnDefaultSceneConfigSaveComplete = AZStd::function<void(const AzPhysics::SceneConfiguration&, Result)>;
-        // using OnBox3DDebugConfigSaveComplete = AZStd::function<void(const Debug::DebugConfiguration&, Result)>;
+        using OnBox3DDebugConfigSaveComplete = AZStd::function<void(const Debug::DebugConfiguration&, Result)>;
 
         Box3DSettingsRegistryManager();
         virtual ~Box3DSettingsRegistryManager() = default;
@@ -34,7 +34,7 @@ namespace B3
 
         //! Load the Jolt Debug Configuration from the Settings Registry
         //! @return Returns true if successful.
-        // virtual AZStd::optional<Debug::DebugConfiguration> LoadDebugConfiguration() const;
+        virtual AZStd::optional<Debug::DebugConfiguration> LoadDebugConfiguration() const;
 
         //! Save the Jolt Configuration from the Settings Registry
         //! @return Returns true if successful. When not in Editor, always returns false.
@@ -46,11 +46,11 @@ namespace B3
 
         //! Save the Jolt Debug Configuration from the Settings Registry
         //! @return Returns true if successful. When not in Editor, always returns false.
-        // virtual void SaveDebugConfiguration(const Debug::DebugConfiguration& config, const OnJoltDebugConfigSaveComplete& saveCallback) const;
+        virtual void SaveDebugConfiguration(const Debug::DebugConfiguration& config, const OnBox3DDebugConfigSaveComplete& saveCallback) const;
 
     protected:
         AZStd::string m_settingsRegistryPath;
         AZStd::string m_defaultSceneConfigSettingsRegistryPath;
-        // AZStd::string m_debugSettingsRegistryPath;
+        AZStd::string m_debugSettingsRegistryPath;
     };
 }

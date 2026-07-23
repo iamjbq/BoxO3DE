@@ -38,7 +38,7 @@ namespace B3
             ~ConfigurationWidget() override;
 
             void SetConfiguration(const B3::Box3DSystemConfiguration& box3DSystemConfiguration,
-                                  // const B3::Debug::DebugConfiguration& joltDebugConfiguration,
+                                  const B3::Debug::DebugConfiguration& joltDebugConfiguration,
                                   const AzPhysics::SceneConfiguration& defaultSceneConfiguration);
 
             // ConfigurationWindowRequestBus
@@ -48,13 +48,13 @@ namespace B3
 
             signals:
                 void onConfigurationChanged(const B3::Box3DSystemConfiguration& box3DSystemConfiguration,
-                                            // const B3::Debug::DebugConfiguration& joltDebugConfig,
+                                            const B3::Debug::DebugConfiguration& joltDebugConfig,
                                             const AzPhysics::SceneConfiguration& defaultSceneConfiguration);
 
         private:
             AzPhysics::SceneConfiguration m_defaultSceneConfiguration;
             B3::Box3DSystemConfiguration m_box3DSystemConfiguration;
-            // B3::Debug::DebugConfiguration m_box3DDebugConfiguration;
+            B3::Debug::DebugConfiguration m_box3DDebugConfiguration;
 
             AzQtComponents::TabWidget* m_tabs;
             SettingsWidget* m_settings;

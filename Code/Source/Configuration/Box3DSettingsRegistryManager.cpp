@@ -15,7 +15,7 @@ namespace B3
     {
         m_settingsRegistryPath = AZStd::string::format("%s/Gems/" BOXO3DE_SETREG_GEM_NAME "/Box3DSystemConfiguration", AZ::SettingsRegistryMergeUtils::OrganizationRootKey);
         m_defaultSceneConfigSettingsRegistryPath = AZStd::string::format("%s/Gems/" BOXO3DE_SETREG_GEM_NAME "/DefaultSceneConfiguration", AZ::SettingsRegistryMergeUtils::OrganizationRootKey);
-        // m_debugSettingsRegistryPath = AZStd::string::format("%s/Gems/" BOXO3DE_SETREG_GEM_NAME "/Debug/Box3DDebugConfiguration", AZ::SettingsRegistryMergeUtils::OrganizationRootKey);
+        m_debugSettingsRegistryPath = AZStd::string::format("%s/Gems/" BOXO3DE_SETREG_GEM_NAME "/Debug/Box3DDebugConfiguration", AZ::SettingsRegistryMergeUtils::OrganizationRootKey);
     }
 
     AZStd::optional<Box3DSystemConfiguration> Box3DSettingsRegistryManager::LoadSystemConfiguration() const
@@ -61,27 +61,27 @@ namespace B3
         return AZStd::nullopt;
     }
 
-    // AZStd::optional<Debug::DebugConfiguration> Box3DSettingsRegistryManager::LoadDebugConfiguration() const
-    // {
-    //     Debug::DebugConfiguration systemConfig;
-    //
-    //     bool configurationRead = false;
-    //
-    //     AZ::SettingsRegistryInterface* settingsRegistry = AZ::SettingsRegistry::Get();
-    //     if (settingsRegistry)
-    //     {
-    //         configurationRead = settingsRegistry->GetObject(systemConfig, m_debugSettingsRegistryPath);
-    //     }
-    //
-    //     if (configurationRead)
-    //     {
-    //         AZ_TracePrintf("Box3DSystem", R"(Debug::DebugConfiguration was read from settings registry at pointer path)"
-    //             R"( "%s)" "\n",
-    //             m_debugSettingsRegistryPath.c_str());
-    //         return systemConfig;
-    //     }
-    //     return AZStd::nullopt;
-    // }
+    AZStd::optional<Debug::DebugConfiguration> Box3DSettingsRegistryManager::LoadDebugConfiguration() const
+    {
+        Debug::DebugConfiguration systemConfig;
+    
+        bool configurationRead = false;
+    
+        AZ::SettingsRegistryInterface* settingsRegistry = AZ::SettingsRegistry::Get();
+        if (settingsRegistry)
+        {
+            configurationRead = settingsRegistry->GetObject(systemConfig, m_debugSettingsRegistryPath);
+        }
+    
+        if (configurationRead)
+        {
+            AZ_TracePrintf("Box3DSystem", R"(Debug::DebugConfiguration was read from settings registry at pointer path)"
+                R"( "%s)" "\n",
+                m_debugSettingsRegistryPath.c_str());
+            return systemConfig;
+        }
+        return AZStd::nullopt;
+    }
 
     void Box3DSettingsRegistryManager::SaveSystemConfiguration([[maybe_unused]] const Box3DSystemConfiguration& config, const OnBox3DConfigSaveComplete& saveCallback) const
     {
@@ -101,12 +101,12 @@ namespace B3
         }
     }
 
-    // void Box3DSettingsRegistryManager::SaveDebugConfiguration([[maybe_unused]] const Debug::DebugConfiguration& config, const OnBox3DDebugConfigSaveComplete& saveCallback) const
-    // {
-    //     //Box3DSettingsRegistryManager will implement, as saving is editor only currently.
-    //     if (saveCallback)
-    //     {
-    //         saveCallback(config, Result::Failed);
-    //     }
-    // }
+    void Box3DSettingsRegistryManager::SaveDebugConfiguration([[maybe_unused]] const Debug::DebugConfiguration& config, const OnBox3DDebugConfigSaveComplete& saveCallback) const
+    {
+        //Box3DSettingsRegistryManager will implement, as saving is editor only currently.
+        if (saveCallback)
+        {
+            saveCallback(config, Result::Failed);
+        }
+    }
 }

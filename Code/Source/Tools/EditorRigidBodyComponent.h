@@ -122,7 +122,7 @@ namespace B3
         bool SupportsEditorRayIntersect() override;
 
         void CreateEditorWorldRigidBody();
-        // void UpdateDebugDrawSettings(const Debug::DebugDisplayData& data);
+        void UpdateDebugDrawSettings(const Debug::DebugDisplayData& data);
 
         void SetShouldBeRecreated();
 
@@ -131,7 +131,7 @@ namespace B3
 
         void OnConfigurationChanged();
 
-        // Debug::DebugDisplayDataChangedEvent::Handler m_debugDisplayDataChangeHandler;
+        Debug::DebugDisplayDataChangedEvent::Handler m_debugDisplayDataChangeHandler;
 
         EditorRigidBodyConfiguration m_config; //!< Generic properties from AzPhysics.
         RigidBodyConfiguration

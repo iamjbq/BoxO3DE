@@ -16,7 +16,7 @@ namespace B3
         // Box3DSystemSettingsRegistry ...
         void SaveSystemConfiguration(const Box3DSystemConfiguration& config, const OnBox3DConfigSaveComplete& saveCallback) const override;
         void SaveDefaultSceneConfiguration(const AzPhysics::SceneConfiguration& config, const OnDefaultSceneConfigSaveComplete& saveCallback) const override;
-        // void SaveDebugConfiguration(const Debug::DebugConfiguration& config, const OnBox3DDebugConfigSaveComplete& saveCallback) const override;
+        void SaveDebugConfiguration(const Debug::DebugConfiguration& config, const OnBox3DDebugConfigSaveComplete& saveCallback) const override;
 
     private:
         AZ::IO::FixedMaxPath m_box3DConfigurationFilePath = "Registry/box3dsystemconfiguration.setreg";

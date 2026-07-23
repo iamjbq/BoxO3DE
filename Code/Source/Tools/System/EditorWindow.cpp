@@ -14,6 +14,7 @@
 #include <BoxO3DE/Configuration/Box3DConfiguration.h>
 #include <Tools/System/ConfigurationWidget.h>
 #include <System/Box3DSystem.h>
+#include <BoxO3DE/Debug/Box3DDebugConfiguration.h>
 
 namespace B3
 {
@@ -28,12 +29,12 @@ namespace B3
             auto* physicsSystem = AZ::Interface<AzPhysics::SystemInterface>::Get();
             const auto* box3DSystemConfiguration = azdynamic_cast<const B3::Box3DSystemConfiguration*>(physicsSystem->GetConfiguration());
             const AzPhysics::SceneConfiguration& defaultSceneConfiguration = physicsSystem->GetDefaultSceneConfiguration();
-            // const B3::Debug::DebugConfiguration& box3DDebugConfiguration = AZ::Interface<B3::Debug::Box3DDebugInterface>::Get()->GetDebugConfiguration();
+            const B3::Debug::DebugConfiguration& box3DDebugConfiguration = AZ::Interface<B3::Debug::Box3DDebugInterface>::Get()->GetDebugConfiguration();
             
 
             m_ui->m_box3DConfigurationWidget->SetConfiguration(
                 *box3DSystemConfiguration,
-                // box3DDebugConfiguration,
+                box3DDebugConfiguration,
                 defaultSceneConfiguration
                 );
             connect(m_ui->m_box3DConfigurationWidget, &B3::Editor::ConfigurationWidget::onConfigurationChanged,
@@ -55,7 +56,7 @@ namespace B3
 
         void EditorWindow::SaveConfiguration(
             const B3::Box3DSystemConfiguration& box3DSystemConfiguration,
-            // const B3::Debug::DebugConfiguration& box3DDebugConfig,
+            const B3::Debug::DebugConfiguration& box3DDebugConfig,
             const AzPhysics::SceneConfiguration& defaultSceneConfiguration)
         {
             auto* box3DSystem = GetBox3DSystem();
@@ -99,25 +100,25 @@ namespace B3
                 settingsRegManager.SaveDefaultSceneConfiguration(defaultSceneConfiguration, saveCallback);
             }
 
-            //Update the debug configuration
-            // if (auto* box3DDebug = AZ::Interface<Debug::Box3DDebugInterface>::Get())
-            // {
-            //     if (box3DDebug->GetDebugConfiguration() != box3DDebugConfig)
-            //     {
-            //         auto saveCallback = [](const Debug::DebugConfiguration& config, Box3DSettingsRegistryManager::Result result)
-            //         {
-            //             AZ_Warning("Box3D", result == Box3DSettingsRegistryManager::Result::Success, "Unable to save the Box3D debug configuration. Any changes have not been applied.");
-            //             if (result == Box3DSettingsRegistryManager::Result::Success)
-            //             {
-            //                 if (auto* box3DDebug = AZ::Interface<Debug::Box3DDebugInterface>::Get())
-            //                 {
-            //                     box3DDebug->UpdateDebugConfiguration(config);
-            //                 }
-            //             }
-            //         };
-            //         settingsRegManager.SaveDebugConfiguration(box3DDebugConfig, saveCallback);
-            //     }
-            // }
+            // Update the debug configuration
+             if (auto* box3DDebug = AZ::Interface<Debug::Box3DDebugInterface>::Get())
+             {
+                 if (box3DDebug->GetDebugConfiguration() != box3DDebugConfig)
+                 {
+                     auto saveCallback = [](const Debug::DebugConfiguration& config, Box3DSettingsRegistryManager::Result result)
+                     {
+                         AZ_Warning("Box3D", result == Box3DSettingsRegistryManager::Result::Success, "Unable to save the Box3D debug configuration. Any changes have not been applied.");
+                         if (result == Box3DSettingsRegistryManager::Result::Success)
+                         {
+                             if (auto* box3DDebug = AZ::Interface<Debug::Box3DDebugInterface>::Get())
+                             {
+                                 box3DDebug->UpdateDebugConfiguration(config);
+                             }
+                         }
+                     };
+                     settingsRegManager.SaveDebugConfiguration(box3DDebugConfig, saveCallback);
+                 }
+             }
         }
     }
 }

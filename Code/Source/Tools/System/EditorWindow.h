@@ -50,7 +50,7 @@ namespace B3
         private:
             static void SaveConfiguration(
                 const B3::Box3DSystemConfiguration& box3DSystemConfiguration,
-                // const B3::Debug::DebugConfiguration& box3DDebugConfiguration,
+                const B3::Debug::DebugConfiguration& box3DDebugConfiguration,
                 const AzPhysics::SceneConfiguration& defaultSceneConfiguration);
 
             QScopedPointer<Ui::EditorWindowClass> m_ui;

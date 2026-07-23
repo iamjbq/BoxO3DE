@@ -5,7 +5,7 @@
 #include <AzCore/RTTI/RTTI.h>
 #include <AzFramework/Physics/Configuration/SystemConfiguration.h>
 
-// #include <PhysX/Debug/PhysXDebugConfiguration.h>
+#include <BoxO3DE/Debug/Box3DDebugConfiguration.h>
 
 namespace AZ
 {

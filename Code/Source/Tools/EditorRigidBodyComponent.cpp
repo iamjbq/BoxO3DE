@@ -366,16 +366,16 @@ namespace B3
         AZ::NonUniformScaleRequestBus::Event(entityId, &AZ::NonUniformScaleRequests::RegisterScaleChangedEvent,
             m_nonUniformScaleChangedHandler);
 
-        // if (auto* physXDebug = AZ::Interface<Debug::Box3DDebugInterface>::Get())
-        // {
-        //     m_debugDisplayDataChangeHandler = Debug::DebugDisplayDataChangedEvent::Handler(
-        //         [this](const Debug::DebugDisplayData& data)
-        //         {
-        //             this->UpdateDebugDrawSettings(data);
-        //         });
-        //     physXDebug->RegisterDebugDisplayDataChangedEvent(m_debugDisplayDataChangeHandler);
-        //     UpdateDebugDrawSettings(physXDebug->GetDebugDisplayData());
-        // }
+        if (auto* box3DDebug = AZ::Interface<Debug::Box3DDebugInterface>::Get())
+        {
+            m_debugDisplayDataChangeHandler = Debug::DebugDisplayDataChangedEvent::Handler(
+                [this](const Debug::DebugDisplayData& data)
+                {
+                    this->UpdateDebugDrawSettings(data);
+                });
+            box3DDebug->RegisterDebugDisplayDataChangedEvent(m_debugDisplayDataChangeHandler);
+            UpdateDebugDrawSettings(box3DDebug->GetDebugDisplayData());
+        }
         CreateEditorWorldRigidBody();
 
         // B3::EditorMeshColliderValidationRequestBus::Event(
@@ -388,7 +388,7 @@ namespace B3
     {
         AZ::EntityBus::Handler::BusDisconnect();
 
-        // m_debugDisplayDataChangeHandler.Disconnect();
+        m_debugDisplayDataChangeHandler.Disconnect();
         m_sceneConfigChangedHandler.Disconnect();
 
         AzPhysics::SimulatedBodyComponentRequestsBus::Handler::BusDisconnect();
@@ -649,11 +649,11 @@ namespace B3
         return AzPhysics::SceneQueryHit();
     }
 
-    // void EditorRigidBodyComponent::UpdateDebugDrawSettings(const Debug::DebugDisplayData& data)
-    // {
-    //     m_centerOfMassDebugColor = data.m_centerOfMassDebugColor;
-    //     m_centerOfMassDebugSize = data.m_centerOfMassDebugSize;
-    // }
+    void EditorRigidBodyComponent::UpdateDebugDrawSettings(const Debug::DebugDisplayData& data)
+    {
+        m_centerOfMassDebugColor = data.m_centerOfMassDebugColor;
+        m_centerOfMassDebugSize = data.m_centerOfMassDebugSize;
+    }
 
     const AzPhysics::RigidBody* EditorRigidBodyComponent::GetRigidBody() const
     {
