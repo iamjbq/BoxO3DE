@@ -2,7 +2,7 @@
 
 #include <AzCore/Serialization/SerializeContext.h>
 #include <AzCore/Serialization/EditContext.h>
-#include <AzFramework/Translation/TranslationDef.h>
+// #include <AzFramework/Translation/TranslationDef.h>
 
 namespace B3
 {
@@ -126,64 +126,64 @@ namespace B3
 
                 if (AZ::EditContext* editContext = serialize->GetEditContext())
                 {
-                    editContext->Class<DebugDisplayData>(QT_TRANSLATE_NOOP("Box3D", "Editor Configuration"), QT_TRANSLATE_NOOP("Box3D", "Editor settings for Box3D."))
+                    editContext->Class<DebugDisplayData>("Editor Configuration", "Editor settings for Box3D.")
                         ->ClassElement(AZ::Edit::ClassElements::EditorData, "")
                         ->Attribute(AZ::Edit::Attributes::AutoExpand, true)
                         ->DataElement(AZ::Edit::UIHandlers::Slider, &DebugDisplayData::m_centerOfMassDebugSize,
-                            QT_TRANSLATE_NOOP("Box3D", "Debug Draw Center of Mass Size"), QT_TRANSLATE_NOOP("Box3D", "The size of the debug draw circle representing the center of mass."))
+                            "Debug Draw Center of Mass Size", "The size of the debug draw circle representing the center of mass.")
                         ->Attribute(AZ::Edit::Attributes::Min, 0.1f)
                         ->Attribute(AZ::Edit::Attributes::Max, 5.0f)
                         ->DataElement(AZ::Edit::UIHandlers::Default, &DebugDisplayData::m_centerOfMassDebugColor,
-                            QT_TRANSLATE_NOOP("Box3D", "Debug Draw Center of Mass Color"), QT_TRANSLATE_NOOP("Box3D", "The color of the debug draw circle representing the center of mass."))
-                        ->DataElement(AZ::Edit::UIHandlers::ComboBox, &DebugDisplayData::m_globalCollisionDebugDraw, QT_TRANSLATE_NOOP("Box3D", "Global Collision Debug"),
-                            QT_TRANSLATE_NOOP("Box3D", "Set up global collision debug draw."
+                            "Debug Draw Center of Mass Color", "The color of the debug draw circle representing the center of mass.")
+                        ->DataElement(AZ::Edit::UIHandlers::ComboBox, &DebugDisplayData::m_globalCollisionDebugDraw, "Global Collision Debug",
+                            "Set up global collision debug draw."
                             "<ul style=\"margin-left:15px; margin-top:-10px; -qt-list-indent:0;\">"
                             "<li><b>Enable all colliders</b><br>Displays all Box3D collider shapes, including colliders previously set as hidden.\n</li>"
                             "<li><b>Disable all colliders</b><br>Hides all Box3D collider shapes, including colliders previously set as visible.\n</li>"
                             "<li><b>Set manually</b><br>You can update Box3D colliders on each entity. The default state is on.</li>"
-                            "</ul>"))
-                        ->EnumAttribute(DebugDisplayData::GlobalCollisionDebugState::AlwaysOn, QT_TRANSLATE_NOOP("Box3D", "Enable all colliders"))
-                        ->EnumAttribute(DebugDisplayData::GlobalCollisionDebugState::AlwaysOff, QT_TRANSLATE_NOOP("Box3D", "Disable all colliders"))
-                        ->EnumAttribute(DebugDisplayData::GlobalCollisionDebugState::Manual, QT_TRANSLATE_NOOP("Box3D", "Set manually"))
-                        ->DataElement(AZ::Edit::UIHandlers::ComboBox, &DebugDisplayData::m_globalCollisionDebugDrawColorMode, QT_TRANSLATE_NOOP("Box3D", "Global Collision Debug Color Mode"),
-                            QT_TRANSLATE_NOOP("Box3D", "Set up debug color mode."
+                            "</ul>")
+                        ->EnumAttribute(DebugDisplayData::GlobalCollisionDebugState::AlwaysOn, "Enable all colliders")
+                        ->EnumAttribute(DebugDisplayData::GlobalCollisionDebugState::AlwaysOff, "Disable all colliders")
+                        ->EnumAttribute(DebugDisplayData::GlobalCollisionDebugState::Manual, "Set manually")
+                        ->DataElement(AZ::Edit::UIHandlers::ComboBox, &DebugDisplayData::m_globalCollisionDebugDrawColorMode, "Global Collision Debug Color Mode",
+                            "Set up debug color mode."
                             "<ul style=\"margin-left:15px; margin-top:-10px; -qt-list-indent:0;\">"
                             "<li><b>Material Color Mode</b><br>Uses debug color specified in material.\n</li>"
                             "<li><b>Error Mode</b><br>Shows glowing red error colors for cases like meshes with too many triangles.\n</li>"
-                            "</ul>"))
-                        ->EnumAttribute(DebugDisplayData::GlobalCollisionDebugColorMode::MaterialColor, QT_TRANSLATE_NOOP("Box3D", "Material Color Mode"))
-                        ->EnumAttribute(DebugDisplayData::GlobalCollisionDebugColorMode::ErrorColor, QT_TRANSLATE_NOOP("Box3D", "Error Mode"))
+                            "</ul>")
+                        ->EnumAttribute(DebugDisplayData::GlobalCollisionDebugColorMode::MaterialColor, "Material Color Mode")
+                        ->EnumAttribute(DebugDisplayData::GlobalCollisionDebugColorMode::ErrorColor, "Error Mode")
 
                         ->Attribute(AZ::Edit::Attributes::ChangeNotify, AZ::Edit::PropertyRefreshLevels::EntireTree)
 
                         ->DataElement(AZ::Edit::UIHandlers::Default, &DebugDisplayData::m_showJointHierarchy,
-                            QT_TRANSLATE_NOOP("Box3D", "Display Joints Hierarchy"),
-                            QT_TRANSLATE_NOOP("Box3D", "Flag to switch on / off the display of joint lead-follower connections in the viewport."))
+                            "Display Joints Hierarchy",
+                            "Flag to switch on / off the display of joint lead-follower connections in the viewport.")
                         ->DataElement(AZ::Edit::UIHandlers::ComboBox, &DebugDisplayData::m_jointHierarchyLeadColor,
-                            QT_TRANSLATE_NOOP("Box3D", "Joints Hierarchy Lead Color"),
-                            QT_TRANSLATE_NOOP("Box3D", "Color of the lead half of a lead-follower joint connection line."))
-                        ->EnumAttribute(DebugDisplayData::JointLeadColor::Aquamarine, QT_TRANSLATE_NOOP("Box3D", "Aquamarine"))
-                        ->EnumAttribute(DebugDisplayData::JointLeadColor::AliceBlue, QT_TRANSLATE_NOOP("Box3D", "AliceBlue"))
-                        ->EnumAttribute(DebugDisplayData::JointLeadColor::CadetBlue, QT_TRANSLATE_NOOP("Box3D", "CadetBlue"))
-                        ->EnumAttribute(DebugDisplayData::JointLeadColor::Coral, QT_TRANSLATE_NOOP("Box3D", "Coral"))
-                        ->EnumAttribute(DebugDisplayData::JointLeadColor::Green, QT_TRANSLATE_NOOP("Box3D", "Green"))
-                        ->EnumAttribute(DebugDisplayData::JointLeadColor::DarkGreen, QT_TRANSLATE_NOOP("Box3D", "DarkGreen"))
-                        ->EnumAttribute(DebugDisplayData::JointLeadColor::ForestGreen, QT_TRANSLATE_NOOP("Box3D", "ForestGreen"))
-                        ->EnumAttribute(DebugDisplayData::JointLeadColor::Honeydew, QT_TRANSLATE_NOOP("Box3D", "Honeydew"))
+                            "Joints Hierarchy Lead Color",
+                            "Color of the lead half of a lead-follower joint connection line.")
+                        ->EnumAttribute(DebugDisplayData::JointLeadColor::Aquamarine, "Aquamarine")
+                        ->EnumAttribute(DebugDisplayData::JointLeadColor::AliceBlue, "AliceBlue")
+                        ->EnumAttribute(DebugDisplayData::JointLeadColor::CadetBlue, "CadetBlue")
+                        ->EnumAttribute(DebugDisplayData::JointLeadColor::Coral, "Coral")
+                        ->EnumAttribute(DebugDisplayData::JointLeadColor::Green, "Green")
+                        ->EnumAttribute(DebugDisplayData::JointLeadColor::DarkGreen, "DarkGreen")
+                        ->EnumAttribute(DebugDisplayData::JointLeadColor::ForestGreen, "ForestGreen")
+                        ->EnumAttribute(DebugDisplayData::JointLeadColor::Honeydew, "Honeydew")
                         ->DataElement(AZ::Edit::UIHandlers::ComboBox, &DebugDisplayData::m_jointHierarchyFollowerColor,
-                            QT_TRANSLATE_NOOP("Box3D", "Joints Hierarchy Follower Color"),
-                            QT_TRANSLATE_NOOP("Box3D", "Color of the follower half of a lead-follower joint connection line."))
-                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::Chocolate, QT_TRANSLATE_NOOP("Box3D", "Chocolate"))
-                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::HotPink, QT_TRANSLATE_NOOP("Box3D", "HotPink"))
-                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::Lavender, QT_TRANSLATE_NOOP("Box3D", "Lavender"))
-                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::Magenta, QT_TRANSLATE_NOOP("Box3D", "Magenta"))
-                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::LightYellow, QT_TRANSLATE_NOOP("Box3D", "LightYellow"))
-                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::Maroon, QT_TRANSLATE_NOOP("Box3D", "Maroon"))
-                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::Red, QT_TRANSLATE_NOOP("Box3D", "Red"))
-                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::Yellow, QT_TRANSLATE_NOOP("Box3D", "Yellow"))
+                            "Joints Hierarchy Follower Color",
+                            "Color of the follower half of a lead-follower joint connection line.")
+                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::Chocolate, "Chocolate")
+                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::HotPink, "HotPink")
+                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::Lavender, "Lavender")
+                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::Magenta, "Magenta")
+                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::LightYellow, "LightYellow")
+                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::Maroon, "Maroon")
+                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::Red, "Red")
+                        ->EnumAttribute(DebugDisplayData::JointFollowerColor::Yellow, "Yellow")
                         ->DataElement(AZ::Edit::UIHandlers::Default, &DebugDisplayData::m_jointHierarchyDistanceThreshold,
-                            QT_TRANSLATE_NOOP("Box3D", "Joints Hierarchy Distance Threshold"),
-                            QT_TRANSLATE_NOOP("Box3D", "Minimum distance required to draw from follower to joint. Distances shorter than this threshold will result in the line drawn from the joint to the lead."))
+                            "Joints Hierarchy Distance Threshold",
+                            "Minimum distance required to draw from follower to joint. Distances shorter than this threshold will result in the line drawn from the joint to the lead.")
                         ->Attribute(AZ::Edit::Attributes::Min, 0.000001f)
                         ->Attribute(AZ::Edit::Attributes::Max, 20.0f)
                         ;
@@ -276,7 +276,7 @@ namespace B3
 
         bool DebugConfiguration::operator==(const DebugConfiguration& other) const
         {
-            return m_debugDisplayData == other.m_debugDisplayData &&
+            return m_debugDisplayData == other.m_debugDisplayData //&&
                 // m_pvdConfigurationData == other.m_pvdConfigurationData
                 ;
         }

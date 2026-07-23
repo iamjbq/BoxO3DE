@@ -5,7 +5,7 @@
 #include <AzCore/Component/TickBus.h>
 #include <AzCore/Interface/Interface.h>
 #include <AzFramework/Entity/EntityDebugDisplayBus.h>
-#include <AzFramework/Translation/TranslationDef.h>
+// #include <AzFramework/Translation/TranslationDef.h>
 #include <AzToolsFramework/API/ToolsApplicationAPI.h>
 #include <LyViewPaneNames.h>
 #include <LmbrCentral/Geometry/GeometrySystemComponentBus.h>
@@ -140,21 +140,21 @@ namespace B3
                     using VisibilityFunc = bool(*)();
 
                     editContext->Class<Collider>(
-                        QT_TRANSLATE_NOOP("Box3D", "Box3D Collider Debug Draw"), QT_TRANSLATE_NOOP("Box3D", "Global and per-collider debug draw preferences."))
-                        ->DataElement(AZ::Edit::UIHandlers::CheckBox, &Collider::m_locallyEnabled, QT_TRANSLATE_NOOP("Box3D", "Draw collider"),
-                            QT_TRANSLATE_NOOP("Box3D", "Display collider geometry in the viewport."))
+                        "Box3D Collider Debug Draw", "Global and per-collider debug draw preferences.")
+                        ->DataElement(AZ::Edit::UIHandlers::CheckBox, &Collider::m_locallyEnabled, "Draw collider",
+                            "Display collider geometry in the viewport.")
                             ->Attribute(AZ::Edit::Attributes::CheckboxTooltip,
-                                QT_TRANSLATE_NOOP("Box3D", "If set, the geometry of this collider is visible in the viewport. 'Draw Helpers' needs to be enabled to use."))
+                                "If set, the geometry of this collider is visible in the viewport. 'Draw Helpers' needs to be enabled to use.")
                             ->Attribute(AZ::Edit::Attributes::Visibility,
                                 VisibilityFunc{ []() { return IsGlobalColliderDebugCheck(GlobalCollisionDebugState::Manual); } })
                             ->Attribute(AZ::Edit::Attributes::ReadOnly, &IsDrawColliderReadOnly)
-                        ->UIElement(AZ::Edit::UIHandlers::Button, QT_TRANSLATE_NOOP("Box3D", "Draw collider"),
-                            QT_TRANSLATE_NOOP("Box3D", "Display collider geometry in the viewport."))
-                            ->Attribute(AZ::Edit::Attributes::ButtonText, QT_TRANSLATE_NOOP("Box3D", "Global override"))
+                        ->UIElement(AZ::Edit::UIHandlers::Button, "Draw collider",
+                            "Display collider geometry in the viewport.")
+                            ->Attribute(AZ::Edit::Attributes::ButtonText, "Global override")
                             ->Attribute(AZ::Edit::Attributes::ButtonTooltip,
-                                QT_TRANSLATE_NOOP("Box3D", "A global setting is overriding this property (to disable the override, "
+                                "A global setting is overriding this property (to disable the override, "
                                 "set the Global Collision Debug setting to \"Set manually\" in the PhysX Configuration)."
-                                "'Draw Helpers' needs to be enabled to use."))
+                                "'Draw Helpers' needs to be enabled to use.")
                             ->Attribute(AZ::Edit::Attributes::Visibility,
                                 VisibilityFunc{ []() { return !IsGlobalColliderDebugCheck(GlobalCollisionDebugState::Manual); } })
                             ->Attribute(AZ::Edit::Attributes::ChangeNotify, &OpenBox3DSettingsWindow)
@@ -273,13 +273,13 @@ namespace B3
                 
                 if (meshData)
                 {
-                    // if (meshData->is<physx::PxTriangleMesh>())
-                    // {
-                    //     BuildTriangleMesh(meshData, geomIndex);
-                    // }
-                    // else
+                    if (cookedMeshConfig.GetMeshType() == Physics::CookedMeshShapeConfiguration::MeshType::TriangleMesh)
                     {
-                        BuildConvexMesh(meshData, geomIndex);
+                        // BuildTriangleMesh(meshData, geomIndex);
+                    }
+                    else
+                    {
+                        BuildConvexMesh(meshData, geomIndex); // TODO: make it work
                     }
                 }
                 break;
@@ -383,51 +383,93 @@ namespace B3
         {
             GeometryData& geom = m_geometry[geomIndex];
 
-            AZStd::vector<AZ::Vector3>& verts = geom.m_verts;
-            AZStd::vector<AZ::Vector3>& points = geom.m_points;
+            AZStd::vector<AZ::Vector3>& debugVerts = geom.m_verts;
+            AZStd::vector<AZ::Vector3>& debugPoints = geom.m_points;
+            AZStd::vector<AZ::u32> debugIndices = geom.m_indices;
             
+            std::vector<std::vector<AZ::Vector3>> facePolylines;
+            facePolylines.reserve(hullData->faceCount);
+            const b3HullFace* faces = b3GetHullFaces(hullData);
+            const b3HullHalfEdge* halfEdges = b3GetHullEdges(hullData);
+            const b3Vec3* points = b3GetHullPoints(hullData);
             
-            const b3HullVertex* box3DVertices = b3GetHullVertices(hullData);
-
-            physx::PxConvexMeshGeometry mesh = physx::PxConvexMeshGeometry(reinterpret_cast<physx::PxConvexMesh*>(meshData));
-            const physx::PxConvexMesh* convexMesh = mesh.convexMesh;
-            const physx::PxU8* pxIndices = convexMesh->getIndexBuffer();
-            const physx::PxVec3* pxVertices = convexMesh->getVertices();
-            const AZ::u32 numPolys = convexMesh->getNbPolygons();
-
-            for (AZ::u32 polygonIndex = 0; polygonIndex < numPolys; ++polygonIndex)
+            for (int f = 0; f < hullData->faceCount; ++f)
             {
-                physx::PxHullPolygon poly;
-                convexMesh->getPolygonData(polygonIndex, poly);
-
-                AZ::u32 index1 = 0;
-                AZ::u32 index2 = 1;
-                AZ::u32 index3 = 2;
-
-                const AZ::Vector3 a = Box3DMathConvert(pxVertices[pxIndices[poly.mIndexBase + index1]]);
-                const AZ::u32 triangleCount = poly.mNbVerts - 2;
-
-                for (AZ::u32 triangleIndex = 0; triangleIndex < triangleCount; ++triangleIndex)
+                const b3HullFace& face = faces[f];
+                
+                AZStd::vector<AZ::Vector3> faceVerts;
+                uint8_t startEdge = face.edge;
+                uint8_t currentEdge = startEdge;
+                do
                 {
-                    AZ_Assert(index3 < poly.mNbVerts, "Implementation error: attempted to index outside range of polygon vertices.");
+                    const b3HullHalfEdge& edge = halfEdges[currentEdge];
+                    faceVerts.push_back(Box3DMathConvert(points[edge.origin]));
+                    currentEdge = edge.next;
+                }
+                while (currentEdge != startEdge);
+                
+                // --- solid mesh: fan triangulate, push shared verts + indices ---
+                const AZ::u32 baseIndex = static_cast<AZ::u32>(debugVerts.size());
+                for (const auto& vert : faceVerts)
+                {
+                    debugVerts.push_back(vert);
+                }
+                for (size_t i = 1; i + 1 < faceVerts.size(); ++i)
+                {
+                    debugIndices.push_back(baseIndex);
+                    debugIndices.push_back(baseIndex + static_cast<AZ::u32>(i));
+                    debugIndices.push_back(baseIndex + static_cast<AZ::u32>(i + 1));
+                }
 
-                    const AZ::Vector3 b = Box3DMathConvert(pxVertices[pxIndices[poly.mIndexBase + index2]]);
-                    const AZ::Vector3 c = Box3DMathConvert(pxVertices[pxIndices[poly.mIndexBase + index3]]);
-
-                    verts.push_back(a);
-                    verts.push_back(b);
-                    verts.push_back(c);
-
-                    points.push_back(a);
-                    points.push_back(b);
-                    points.push_back(b);
-                    points.push_back(c);
-                    points.push_back(c);
-                    points.push_back(a);
-
-                    index2 = index3++;
+                // --- wireframe: clean perimeter only, no diagonals ---
+                for (size_t i = 0; i < faceVerts.size(); ++i)
+                {
+                    const AZ::Vector3& start = faceVerts[i];
+                    const AZ::Vector3& end = faceVerts[(i + 1) % faceVerts.size()];
+                    debugPoints.push_back(start);
+                    debugPoints.push_back(end);
                 }
             }
+
+            // physx::PxConvexMeshGeometry mesh = physx::PxConvexMeshGeometry(reinterpret_cast<physx::PxConvexMesh*>(meshData));
+            // const physx::PxConvexMesh* convexMesh = mesh.convexMesh;
+            // const physx::PxU8* pxIndices = convexMesh->getIndexBuffer();
+            // const physx::PxVec3* pxVertices = convexMesh->getVertices();
+            // const AZ::u32 numPolys = convexMesh->getNbPolygons();
+            //
+            // for (AZ::u32 polygonIndex = 0; polygonIndex < numPolys; ++polygonIndex)
+            // {
+            //     physx::PxHullPolygon poly;
+            //     convexMesh->getPolygonData(polygonIndex, poly);
+            //
+            //     AZ::u32 index1 = 0;
+            //     AZ::u32 index2 = 1;
+            //     AZ::u32 index3 = 2;
+            //
+            //     const AZ::Vector3 a = Box3DMathConvert(pxVertices[pxIndices[poly.mIndexBase + index1]]);
+            //     const AZ::u32 triangleCount = poly.mNbVerts - 2;
+            //
+            //     for (AZ::u32 triangleIndex = 0; triangleIndex < triangleCount; ++triangleIndex)
+            //     {
+            //         AZ_Assert(index3 < poly.mNbVerts, "Implementation error: attempted to index outside range of polygon vertices.";
+            //
+            //         const AZ::Vector3 b = Box3DMathConvert(pxVertices[pxIndices[poly.mIndexBase + index2]]);
+            //         const AZ::Vector3 c = Box3DMathConvert(pxVertices[pxIndices[poly.mIndexBase + index3]]);
+            //
+            //         verts.push_back(a);
+            //         verts.push_back(b);
+            //         verts.push_back(c);
+            //
+            //         points.push_back(a);
+            //         points.push_back(b);
+            //         points.push_back(b);
+            //         points.push_back(c);
+            //         points.push_back(c);
+            //         points.push_back(a);
+            //
+            //         index2 = index3++;
+            //     }
+            // }
         }
 
         AZ::Color Collider::CalcDebugColor(const Physics::ColliderConfiguration& colliderConfig
@@ -643,7 +685,9 @@ namespace B3
                 const AZ::u32 triangleCount = static_cast<AZ::u32>(scaledVerts.size() / 3);
                 ElementDebugInfo convexMeshInfo;
                 convexMeshInfo.m_numTriangles = triangleCount;
-
+                
+                // TODO: There exists DrawPolyLine(). Convex hulls aren't exclusively triangle faces
+                // we can walk the half edges and construct a vector of polylines (vector of small vectors)
                 debugDisplay.DrawTriangles(scaledVerts, CalcDebugColor(colliderConfig, convexMeshInfo));
                 debugDisplay.DrawLines(scaledPoints, WireframeColor);
             }

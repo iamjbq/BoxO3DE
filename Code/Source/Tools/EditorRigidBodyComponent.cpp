@@ -50,14 +50,14 @@ namespace B3
                 else
                 {
                     const Physics::ColliderConfiguration colliderConfigurationUnscaled = collider->GetColliderConfiguration();
-                    const Physics::ConvexHullShapeConfiguration convexConfig = shapeConfigurationProxy.m_convexHull;
+                    const Physics::CookedMeshShapeConfiguration convexConfig = shapeConfigurationProxy.m_cookedMesh;
                     // auto convexConfig = Utils::CreateConvexPointsFromPrimitive(colliderConfigurationUnscaled, shapeConfiguration,
                     //     shapeConfigurationProxy.m_subdivisionLevel, shapeConfiguration.m_scale);
                     auto colliderConfigurationNoOffset = colliderConfigurationUnscaled;
                     colliderConfigurationNoOffset.m_rotation = AZ::Quaternion::CreateIdentity();
                     colliderConfigurationNoOffset.m_position = AZ::Vector3::CreateZero();
             
-                    if (convexConfig.m_vertexCount != 0)
+                    if (convexConfig.GetCachedNativeMesh())
                     {
                         AZStd::shared_ptr<Physics::Shape> shape = AZ::Interface<Physics::System>::Get()->CreateShape(
                             colliderConfigurationNoOffset, convexConfig);

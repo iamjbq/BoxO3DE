@@ -212,7 +212,6 @@ namespace B3
     bool EditorShapeColliderComponent::IsDebugDrawDisplayFlagEnabled() const
     {
         return m_colliderDebugDraw.IsDisplayFlagEnabled();
-        return false;
     }
 
     EditorProxyShapeConfig::EditorProxyShapeConfig(const Physics::ShapeConfiguration& shapeConfiguration)
@@ -456,7 +455,7 @@ namespace B3
                 colliderConfig->m_position = AZ::Vector3::CreateZero();
                 BaseColliderComponent* colliderComponent = gameEntity->CreateComponent<BaseColliderComponent>();
                 colliderComponent->SetShapeConfigurationList({ AZStd::make_pair(colliderConfig,
-                    AZStd::make_shared<Physics::ConvexHullShapeConfiguration>(primitiveHullConfig.value())) });
+                    AZStd::make_shared<Physics::CookedMeshShapeConfiguration>(primitiveHullConfig.value())) });
             }
         };
 
@@ -586,12 +585,12 @@ namespace B3
     void EditorShapeColliderComponent::BuildDebugDrawMesh() const
     {
         const AZ::u32 shapeIndex = 0; // Only one mesh gets built from the primitive collider, hence use geomIndex 0.
-        if (m_proxyShapeConfiguration.IsCylinderConfig())
+        if (m_proxyShapeConfiguration.IsCylinderConfig()) // TODO: verify correct filtering
         {
-            physx::PxGeometryHolder pxGeometryHolder;
-            Utils::CreatePxGeometryFromConfig( // This takes the points created from FrustumExtents and builds geometry
-                m_proxyShapeConfiguration.m_cylinder.m_configuration, pxGeometryHolder); // this will cause the native mesh to be cached
-            m_colliderDebugDraw.BuildMeshes(m_proxyShapeConfiguration.m_cylinder, shapeIndex);
+            // physx::PxGeometryHolder pxGeometryHolder;
+            // Utils::CreatePxGeometryFromConfig( // This takes the points created from FrustumExtents and builds geometry
+            //     m_proxyShapeConfiguration.m_cylinder.m_configuration, pxGeometryHolder); // this will cause the native mesh to be cached
+            m_colliderDebugDraw.BuildMeshes(m_proxyShapeConfiguration.m_cookedMesh, shapeIndex);
         }
         else if (!m_hasNonUniformScale)
         {
@@ -603,8 +602,8 @@ namespace B3
                 m_proxyShapeConfiguration.m_subdivisionLevel, m_proxyShapeConfiguration.GetCurrent().m_scale);
             if (m_scaledPrimitive.has_value())
             {
-                physx::PxGeometryHolder pxGeometryHolder;
-                Utils::CreatePxGeometryFromConfig(m_scaledPrimitive.value(), pxGeometryHolder); // this will cause the native mesh to be cached
+                // physx::PxGeometryHolder pxGeometryHolder;
+                // Utils::CreatePxGeometryFromConfig(m_scaledPrimitive.value(), pxGeometryHolder); // this will cause the native mesh to be cached
                 m_colliderDebugDraw.BuildMeshes(m_scaledPrimitive.value(), shapeIndex);
             }
         }
@@ -616,8 +615,8 @@ namespace B3
         m_colliderDebugDraw.DrawMesh(
             debugDisplay,
             GetColliderConfigurationNoOffset(),
-            m_proxyShapeConfiguration.m_cylinder.m_configuration,
-            m_proxyShapeConfiguration.m_cylinder.m_configuration.m_scale,
+            m_proxyShapeConfiguration.m_cookedMesh,
+            m_proxyShapeConfiguration.m_cookedMesh.m_scale,
             shapeIndex);
     }
     
@@ -977,6 +976,12 @@ namespace B3
     {
         UpdateShapeConfigurationScale();
         
+        // This is always done to create a debug mesh
+        if (m_proxyShapeConfiguration.IsCylinderConfig())
+        {
+            UpdateCylinderCookedMesh();
+        }
+        
         if (!m_proxyShapeConfiguration.m_hasNonUniformScale)
         {
             return;
@@ -987,16 +992,16 @@ namespace B3
         if (m_proxyShapeConfiguration.IsSphereConfig())
         {
             // Create a sphere convex hull
-            UpdateSphereConvexHull();
+            UpdateSphereCookedMesh();
         }
         else if (m_proxyShapeConfiguration.IsCapsuleConfig())
         {
             // Create a capsule convex hull
-            UpdateCapsuleConvexHull();
+            UpdateCapsuleCookedMesh();
         }
     }
     
-    void EditorShapeColliderComponent::UpdateSphereConvexHull()
+    void EditorShapeColliderComponent::UpdateSphereCookedMesh()
     {
         const float radius = m_proxyShapeConfiguration.m_cylinder.m_radius;
 
@@ -1011,11 +1016,11 @@ namespace B3
         
         if (sphereHullConfig.has_value())
         {
-            m_proxyShapeConfiguration.m_convexHull = sphereHullConfig.value();
+            m_proxyShapeConfiguration.m_cookedMesh = sphereHullConfig.value();
         }
     }
 
-    void EditorShapeColliderComponent::UpdateCapsuleConvexHull()
+    void EditorShapeColliderComponent::UpdateCapsuleCookedMesh()
     {
         const float radius = m_proxyShapeConfiguration.m_capsule.m_radius;
         const float height = m_proxyShapeConfiguration.m_capsule.m_height;
@@ -1037,11 +1042,11 @@ namespace B3
         
         if (capsuleHullConfig.has_value())
         {
-            m_proxyShapeConfiguration.m_convexHull = capsuleHullConfig.value();
+            m_proxyShapeConfiguration.m_cookedMesh = capsuleHullConfig.value();
         }
     }
 
-    void EditorShapeColliderComponent::UpdateCylinderConvexHull()
+    void EditorShapeColliderComponent::UpdateCylinderCookedMesh()
     {
         const AZ::u8 subdivisionCount = m_proxyShapeConfiguration.m_cylinder.m_subdivisionCount;
         const float height = m_proxyShapeConfiguration.m_cylinder.m_height;
@@ -1061,36 +1066,19 @@ namespace B3
         
         AZStd::vector<AZ::Vector3> samplePoints = Utils::CreatePointsAtFrustumExtents(height, radius, radius, subdivisionCount).value();
         
-        // Convert to native b3Vec3 array and create hull
-        AZStd::vector<b3Vec3> b3Points;
-        b3Points.reserve(samplePoints.size());
-        int size = static_cast<int>(b3Points.size());
-        
-        for (const auto& point : samplePoints)
-        {
-            b3Points.push_back(Box3DMathConvert(point));
-        }
-        
         const AZ::Transform colliderLocalTransform = GetColliderLocalTransform();
-        [[maybe_unused]] const AZ::Vector3 scale = m_proxyShapeConfiguration.m_cylinder.m_scale;
+        const AZ::Vector3 scale = m_proxyShapeConfiguration.m_cylinder.m_scale;
         
-        // TODO: Which one to use? I don't want to duplicate work, or scale twice. Reuse as much as possible
-        // b3HullData* cylinder = b3CreateHull(b3Points.data(), size, size);
-        b3HullData* newCylinder = b3CreateCylinder(height, radius, 0.0f, subdivisionCount);
-        b3HullData* scaledCylinder = b3CloneAndTransformHull(newCylinder, Box3DMathConvert(colliderLocalTransform), Box3DMathConvert(scale)); // also an option if we don't want to scale here
-
         AZStd::transform(
          samplePoints.begin(),
          samplePoints.end(),
          samplePoints.begin(),
-         [&colliderLocalTransform, &scale](const AZ::Vector3& point)
+         [&colliderLocalTransform](const AZ::Vector3& point)
          {
-             return colliderLocalTransform.TransformPoint(point * scale);
+             return colliderLocalTransform.TransformPoint(point);
          });
         
-        m_proxyShapeConfiguration.m_cookedMesh.SetCachedNativeMesh(cylinder);
-        
-        // m_proxyShapeConfiguration.m_cylinder = Utils::CreateCookedMeshConfiguration(samplePoints, scale).value();
+        m_proxyShapeConfiguration.m_cookedMesh = Utils::CreateCookedMeshConfiguration(samplePoints, scale).value();
     }
 
     AZ::Aabb EditorShapeColliderComponent::GetWorldBounds() const

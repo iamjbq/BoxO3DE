@@ -109,7 +109,7 @@ namespace B3
                         
                         halfHeight = std::numeric_limits<float>::epsilon();
                     }
-
+                    
                     AZ::Vector3 axis = colliderConfiguration.m_rotation.TransformVector(AZ::Vector3::CreateAxisZ());
                     b3Capsule capsule;
                     capsule.center1 = Box3DMathConvert(colliderConfiguration.m_position - axis * halfHeight);
@@ -322,13 +322,28 @@ namespace B3
         {
             Physics::CookedMeshShapeConfiguration shapeConfig;
 
-            AZStd::vector<AZ::u8> cookedData;
             bool cookingResult = false;
-            Physics::SystemRequestBus::BroadcastResult(cookingResult, &Physics::SystemRequests::CookConvexMeshToMemory,
-                points.data(), aznumeric_cast<AZ::u32>(points.size()), cookedData);
-            shapeConfig.SetCookedMeshData(cookedData.data(), cookedData.size(),
-                Physics::CookedMeshShapeConfiguration::MeshType::Convex);
+            // AZStd::vector<AZ::u8> cookedData;
+            // Physics::SystemRequestBus::BroadcastResult(cookingResult, &Physics::SystemRequests::CookConvexMeshToMemory,
+            //     points.data(), aznumeric_cast<AZ::u32>(points.size()), cookedData);
+            // shapeConfig.SetCookedMeshData(cookedData.data(), cookedData.size(),
+            //     Physics::CookedMeshShapeConfiguration::MeshType::Convex);
+            
+            // Convert to native b3Vec3 array and create hull
+            AZStd::vector<b3Vec3> b3Points;
+            b3Points.reserve(points.size());
+            int size = static_cast<int>(b3Points.size());
+        
+            for (const auto& point : points)
+            {
+                b3Points.push_back(Box3DMathConvert(point));
+            }
+            
+            b3HullData* convexHull = b3CreateHull(b3Points.data(), size, size);
+            shapeConfig.SetCachedNativeMesh(convexHull);
+            shapeConfig.SetCookedMeshData(nullptr, 0, Physics::CookedMeshShapeConfiguration::MeshType::Convex); // Only way to set mesh type
             shapeConfig.m_scale = scale;
+            cookingResult = true;
 
             if (!cookingResult)
             {
@@ -461,22 +476,19 @@ namespace B3
         //     }
         // }
         
-        AZStd::optional<Physics::ConvexHullShapeConfiguration> CreateConvexPointsFromPrimitive(
+        AZStd::optional<Physics::CookedMeshShapeConfiguration> CreateConvexPointsFromPrimitive(
             const Physics::ColliderConfiguration& colliderConfig,
             const Physics::ShapeConfiguration& primitiveShapeConfig, AZ::u8 subdivisionLevel,
             [[maybe_unused]] const AZ::Vector3& scale)
         {
             AZ::u8 subdivisionLevelClamped = AZ::GetClamp(subdivisionLevel, MinCapsuleSubdivisionLevel, MaxCapsuleSubdivisionLevel);
-
-            // auto applyColliderOffset = [&colliderConfig](const AZ::Vector3 point) {
-            //     return colliderConfig.m_rotation.TransformVector(point) + colliderConfig.m_position;
-            // };
-            auto applyColliderOffset = [&colliderConfig](const AZ::Vector3 point) { // TODO: Verify this since we transform/scale at hull creation
-                AZ_UNUSED(colliderConfig)
-                return point;
+            
+            // We transform points but don't scale until shape creation or debug mesh display
+            auto applyColliderOffset = [&colliderConfig](const AZ::Vector3 point) {
+                return colliderConfig.m_rotation.TransformVector(point) + colliderConfig.m_position;
             };
             
-            Physics::ConvexHullShapeConfiguration convexConfig;
+            Physics::CookedMeshShapeConfiguration convexConfig;
             
             AZStd::vector<AZ::Vector3> points;
             auto shapeType = primitiveShapeConfig.GetShapeType();
@@ -498,10 +510,8 @@ namespace B3
                 points.push_back(applyColliderOffset(AZ::Vector3(+x, -y, +z)));
                 points.push_back(applyColliderOffset(AZ::Vector3(+x, +y, -z)));
                 points.push_back(applyColliderOffset(AZ::Vector3(+x, +y, +z)));
-                    
-                convexConfig.m_vertexData = points.data();
-                convexConfig.m_vertexCount = static_cast<AZ::u32>(points.size());
-                return convexConfig;
+
+                return CreateCookedMeshConfiguration(points, scale);
             }
             case Physics::ShapeType::Capsule:
             {
@@ -526,9 +536,7 @@ namespace B3
                     }
                 }
                     
-                convexConfig.m_vertexData = points.data();
-                convexConfig.m_vertexCount = static_cast<AZ::u32>(points.size());
-                return convexConfig;
+                return CreateCookedMeshConfiguration(points, scale);
             }
             case Physics::ShapeType::Sphere:
             {
@@ -551,15 +559,13 @@ namespace B3
                             layerRadius * AZ::Cos(phi), layerRadius * AZ::Sin(phi), layerHeight)));
                     }
                 }
-                    
-                convexConfig.m_vertexData = points.data();
-                convexConfig.m_vertexCount = static_cast<AZ::u32>(points.size());
-                return convexConfig;
+                
+                return CreateCookedMeshConfiguration(points, scale);
             }
-            case Physics::ShapeType::ConvexHull:
-                return static_cast<const Physics::ConvexHullShapeConfiguration&>(primitiveShapeConfig);
-            // case Physics::ShapeType::CookedMesh:
-            //     return static_cast<const Physics::CookedMeshShapeConfiguration&>(primitiveShapeConfig);
+            // case Physics::ShapeType::ConvexHull:
+            //     return static_cast<const Physics::ConvexHullShapeConfiguration&>(primitiveShapeConfig);
+            case Physics::ShapeType::CookedMesh:
+                return static_cast<const Physics::CookedMeshShapeConfiguration&>(primitiveShapeConfig);
             default:
                 AZ_Error("Box3D Utils", false, "CreateConvexPointsFromPrimitive was called with a non-primitive shape configuration.")
                 return {};

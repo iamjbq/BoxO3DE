@@ -216,10 +216,10 @@ namespace B3
         // AzPhysics::SimulatedBodyHandle GetSimulatedBodyHandle() const override;
         // AzPhysics::SceneQueryHit RayCast(const AzPhysics::RayCastRequest& request) override;
 
-        // Update the cylinder collider convex hull
-        void UpdateSphereConvexHull();
-        void UpdateCapsuleConvexHull();
-        void UpdateCylinderConvexHull();
+        // Update the cylinder collider convex hulls as cooked mesh configs which hold b3HullData*
+        void UpdateSphereCookedMesh();
+        void UpdateCapsuleCookedMesh();
+        void UpdateCylinderCookedMesh();
 
         void UpdateCollider();
         void CreateStaticEditorCollider();
