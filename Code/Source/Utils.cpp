@@ -161,11 +161,10 @@ namespace B3
                         break;
                     }
                     
-                    // TODO: Unsure what yOffset is
                     b3HullData* cylinder = b3CreateCylinder(height, radius, 0.0f, cylinderConfig.m_subdivisionCount);
-                    if (cylinder == NULL)
+                    if (cylinder == nullptr)
                     {
-                        // degenerate input: coincident or coplanar points, or insufficient volume
+                        AZ_Error("Box3D Utils", false, "Cylinder hull data was null.")
                     }
                     b3Transform transform = Box3DMathConvert(colliderConfiguration.m_position, colliderConfiguration.m_rotation);
                     newShapeId = b3CreateTransformedHullShape(bodyId, &shapeDef, cylinder, transform, Box3DMathConvert(cylinderConfig.m_scale));
@@ -190,9 +189,9 @@ namespace B3
                         static_cast<int>(convexHullConfig.m_vertexCount),
                         static_cast<int>(convexHullConfig.m_vertexCount)
                         );
-                    if (hull == NULL)
+                    if (hull == nullptr)
                     {
-                        // degenerate input: coincident or coplanar points, or insufficient volume
+                        AZ_Warning("Box3D Rigid Body", false, "Created hull data was null.")
                     }
                     b3Transform transform = Box3DMathConvert(colliderConfiguration.m_position, colliderConfiguration.m_rotation);
                     newShapeId = b3CreateTransformedHullShape(bodyId, &shapeDef, hull, transform, Box3DMathConvert(convexHullConfig.m_scale));
@@ -208,22 +207,21 @@ namespace B3
                 }
             case Physics::ShapeType::CookedMesh:
                 {
-                    // TODO: unclear whether this has any use in Box3D
-                    // const Physics::CookedMeshShapeConfiguration& constCookedMeshShapeConfig =
-                    //     static_cast<const Physics::CookedMeshShapeConfiguration&>(shapeConfiguration);
-                    //
-                    // // We are deliberately removing the const off of the ShapeConfiguration here because we're going to change the cached
-                    // // native mesh pointer that gets stored in the configuration.
-                    // Physics::CookedMeshShapeConfiguration& cookedMeshShapeConfig =
-                    //     const_cast<Physics::CookedMeshShapeConfiguration&>(constCookedMeshShapeConfig);
-                    //
-                    // physx::PxBase* nativeMeshObject = nullptr;
-                    //
-                    // // Use the cached mesh object if it is there, otherwise create one and save in the shape configuration
-                    // if (cookedMeshShapeConfig.GetCachedNativeMesh())
-                    // {
-                    //     nativeMeshObject = static_cast<physx::PxBase*>(cookedMeshShapeConfig.GetCachedNativeMesh());
-                    // }
+                    const Physics::CookedMeshShapeConfiguration& constCookedMeshShapeConfig =
+                        static_cast<const Physics::CookedMeshShapeConfiguration&>(shapeConfiguration);
+                    
+                    // We are deliberately removing the const off of the ShapeConfiguration here because we're going to change the cached
+                    // native mesh pointer that gets stored in the configuration.
+                    Physics::CookedMeshShapeConfiguration& cookedMeshShapeConfig =
+                        const_cast<Physics::CookedMeshShapeConfiguration&>(constCookedMeshShapeConfig);
+                    
+                    b3HullData* nativeMeshObject = nullptr;
+                    
+                    // Use the cached mesh object if it is there, otherwise create one and save in the shape configuration
+                    if (cookedMeshShapeConfig.GetCachedNativeMesh())
+                    {
+                        nativeMeshObject = static_cast<b3HullData*>(cookedMeshShapeConfig.GetCachedNativeMesh());
+                    }
                     // else
                     // {
                     //     nativeMeshObject = CreateNativeMeshObjectFromCookedData(
@@ -242,8 +240,18 @@ namespace B3
                     //         return false;
                     //     }
                     // }
-                    //
-                    // return MeshDataToPxGeometry(nativeMeshObject, pxGeometry, cookedMeshShapeConfig.m_scale);
+                    
+                    if (nativeMeshObject == nullptr)
+                    {
+                        AZ_Warning("Box3D Rigid Body", false, "Cached cooked mesh object was null.")
+                    }
+                    
+                    // TODO: the nativeMeshObject is still null here
+                    // Convex mesh points are already transformed so we just scale here
+                    newShapeId = b3CreateTransformedHullShape(bodyId, &shapeDef, nativeMeshObject, b3Transform_identity, Box3DMathConvert(cookedMeshShapeConfig.m_scale));
+                    if (b3Shape_IsValid(newShapeId))
+                        success = true;
+                    // b3DestroyHull(nativeMeshObject); // TODO: Unsure if we should do this here or on config
                     break;
                 }
             case Physics::ShapeType::Heightfield:
@@ -282,7 +290,6 @@ namespace B3
                     AZ_Assert(false,
                               "CreateBox3DShapeFromConfig: Cannot pass PhysicsAsset configuration since it is a collection of shapes. "
                               "Please iterate over m_colliderShapes in the asset and call this function for each of them.")
-                    ;
                     break;
                 }
             case Physics::ShapeType::Native:
@@ -291,7 +298,6 @@ namespace B3
                 }
             default:
                 AZ_Warning("Box3D Rigid Body", false, "Shape not supported in Box3D. Shape Type: %d", shapeType)
-                ;
                 break;
             }
                     
@@ -332,25 +338,25 @@ namespace B3
             // Convert to native b3Vec3 array and create hull
             AZStd::vector<b3Vec3> b3Points;
             b3Points.reserve(points.size());
-            int size = static_cast<int>(b3Points.size());
-        
+            
             for (const auto& point : points)
             {
                 b3Points.push_back(Box3DMathConvert(point));
             }
             
+            int size = static_cast<int>(b3Points.size());
             b3HullData* convexHull = b3CreateHull(b3Points.data(), size, size);
-            shapeConfig.SetCachedNativeMesh(convexHull);
-            shapeConfig.SetCookedMeshData(nullptr, 0, Physics::CookedMeshShapeConfiguration::MeshType::Convex); // Only way to set mesh type
-            shapeConfig.m_scale = scale;
-            cookingResult = true;
-
-            if (!cookingResult)
+            cookingResult = convexHull == nullptr;
+            
+            if (cookingResult)
             {
                 AZ_Error("Box3D", false, "Box3D cooking of mesh data failed")
                 return {};
             }
-
+            
+            shapeConfig.SetCookedMeshData(nullptr, 0, Physics::CookedMeshShapeConfiguration::MeshType::Convex); // Only way to set mesh type
+            shapeConfig.SetCachedNativeMesh(convexHull);
+            shapeConfig.m_scale = scale;
             return shapeConfig;
         }
 
@@ -491,8 +497,7 @@ namespace B3
             Physics::CookedMeshShapeConfiguration convexConfig;
             
             AZStd::vector<AZ::Vector3> points;
-            auto shapeType = primitiveShapeConfig.GetShapeType();
-            switch (shapeType)
+            switch (auto shapeType = primitiveShapeConfig.GetShapeType())
             {
             case Physics::ShapeType::Box:
             {
@@ -562,6 +567,9 @@ namespace B3
                 
                 return CreateCookedMeshConfiguration(points, scale);
             }
+            case Physics::ShapeType::Cylinder:
+                AZ_Error("Box3D Utils", false, "CreateConvexPointsFromPrimitive was called with a cylinder shape configuration.")
+                return {};
             // case Physics::ShapeType::ConvexHull:
             //     return static_cast<const Physics::ConvexHullShapeConfiguration&>(primitiveShapeConfig);
             case Physics::ShapeType::CookedMesh:
@@ -579,29 +587,29 @@ namespace B3
 
             if (height <= 0.0f)
             {
-                AZ_Error("Box3D", false, "Frustum height %f must be greater than 0.", height);
+                AZ_Error("Box3D", false, "Frustum height %f must be greater than 0.", height)
                 return {};
             }
 
             if (bottomRadius < 0.0f)
             {
-                AZ_Error("Box3D", false, "Frustum bottom radius %f must be greater or equal to 0.", bottomRadius);
+                AZ_Error("Box3D", false, "Frustum bottom radius %f must be greater or equal to 0.", bottomRadius)
                 return {};
             }
             else if (topRadius < 0.0f)
             {
-                AZ_Error("Box3D", false, "Frustum top radius %f must be greater or equal to 0.", topRadius);
+                AZ_Error("Box3D", false, "Frustum top radius %f must be greater or equal to 0.", topRadius)
                 return {};
             }
             else if (bottomRadius == 0.0f && topRadius == 0.0f)
             {
-                AZ_Error("Box3D", false, "Either frustum bottom radius or top radius must be greater than to 0.");
+                AZ_Error("Box3D", false, "Either frustum bottom radius or top radius must be greater than to 0.")
                 return {};
             }
 
             if (subdivisions < MinFrustumSubdivisions || subdivisions > MaxFrustumSubdivisions)
             {
-                AZ_Error("Box3D", false, "Frustum subdivision count %u is not in [%u, %u] range", subdivisions, MinFrustumSubdivisions, MaxFrustumSubdivisions);
+                AZ_Error("Box3D", false, "Frustum subdivision count %u is not in [%u, %u] range", subdivisions, MinFrustumSubdivisions, MaxFrustumSubdivisions)
                 return {};
             }
 

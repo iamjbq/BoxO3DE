@@ -289,7 +289,7 @@ namespace B3
                 AZ_Error("Box3D", false,
                     "DebugDraw::Collider::BuildMeshes: Cannot pass PhysicsAsset configuration since it is a collection of shapes. "
                     "Please iterate over m_colliderShapes in the asset and call this function for each of them. "
-                    "Entity %s, ID: %llu", GetEntityName().c_str(), m_entityId);
+                    "Entity %s, ID: %llu", GetEntityName().c_str(), m_entityId)
                 break;
             }
 
@@ -304,7 +304,7 @@ namespace B3
             if ((indices.size() / 3) >= TrianglesWarningThreshold)
             {
                 AZ_Warning("Box3D Debug Draw", false, "Mesh has too many triangles! Entity: '%s', ID: %llu",
-                    GetEntityName().c_str(), m_entityId);
+                    GetEntityName().c_str(), m_entityId)
             }
         }
 
@@ -604,7 +604,7 @@ namespace B3
             if (geomIndex >= m_geometry.size())
             {
                 AZ_Error("Box3D", false, "DrawMesh: geomIndex %d is out of range for %s. Size: %d",
-                    geomIndex, GetEntityName().c_str(), m_geometry.size());
+                    geomIndex, GetEntityName().c_str(), m_geometry.size())
                 return;
             }
 
@@ -642,7 +642,7 @@ namespace B3
             AzFramework::DebugDisplayRequests& debugDisplay, const Physics::ColliderConfiguration& colliderConfig, AZ::u32 geomIndex,
             const AZ::Vector3& meshScale) const
         {
-            AZ_Assert(geomIndex < m_geometry.size(), "DrawTriangleMesh: geomIndex is out of range");
+            AZ_Assert(geomIndex < m_geometry.size(), "DrawTriangleMesh: geomIndex is out of range")
 
             const GeometryData& geom = m_geometry[geomIndex];
 
@@ -674,7 +674,7 @@ namespace B3
             AzFramework::DebugDisplayRequests& debugDisplay, const Physics::ColliderConfiguration& colliderConfig, AZ::u32 geomIndex,
             const AZ::Vector3& meshScale) const
         {
-            AZ_Assert(geomIndex < m_geometry.size(), "DrawConvexMesh: geomIndex is out of range");
+            AZ_Assert(geomIndex < m_geometry.size(), "DrawConvexMesh: geomIndex is out of range")
 
             const GeometryData& geom = m_geometry[geomIndex];
             AZStd::vector<AZ::Vector3> scaledVerts = ScalePoints(meshScale, geom.m_verts);
@@ -773,21 +773,21 @@ namespace B3
         const AZStd::vector<AZ::Vector3>& Collider::GetVerts(AZ::u32 geomIndex) const
         {
             AZ_Assert(geomIndex < m_geometry.size(), "GetVerts: geomIndex %d is out of range for %s. Size: %d",
-                geomIndex, GetEntityName().c_str(), m_geometry.size());
+                geomIndex, GetEntityName().c_str(), m_geometry.size())
             return m_geometry[geomIndex].m_verts;
         }
 
         const AZStd::vector<AZ::Vector3>& Collider::GetPoints(AZ::u32 geomIndex) const
         {
             AZ_Assert(geomIndex < m_geometry.size(), "GetPoints: geomIndex %d is out of range for %s. Size: %d",
-                geomIndex, GetEntityName().c_str(), m_geometry.size());
+                geomIndex, GetEntityName().c_str(), m_geometry.size())
             return m_geometry[geomIndex].m_points;
         }
 
         const AZStd::vector<AZ::u32>& Collider::GetIndices(AZ::u32 geomIndex) const
         {
             AZ_Assert(geomIndex < m_geometry.size(), "GetIndices: geomIndex %d is out of range for %s. Size: %d",
-                geomIndex, GetEntityName().c_str(), m_geometry.size());
+                geomIndex, GetEntityName().c_str(), m_geometry.size())
             return m_geometry[geomIndex].m_indices;
         }
 

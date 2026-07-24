@@ -64,7 +64,6 @@ namespace B3
         B3::CylinderShapeConfiguration m_cylinder;
         bool m_hasNonUniformScale = false; //!< Whether there is a non-uniform scale component on this entity.
         AZ::u8 m_subdivisionLevel = 4; //!< The level of subdivision if a primitive shape is replaced with a convex mesh due to scaling.
-        // Physics::ConvexHullShapeConfiguration m_convexHull;
         Physics::CookedMeshShapeConfiguration m_cookedMesh;
 
         bool IsSphereConfig() const;

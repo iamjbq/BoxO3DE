@@ -401,11 +401,16 @@ namespace B3
 
         // When Deactivate is triggered from an application shutdown, it's possible that the
         // scene interface has already been deleted, so check for its existence here again
-        m_sceneInterface = AZ::Interface<AzPhysics::SceneInterface>::Get();
-        if (m_sceneInterface)
-        {
-            m_sceneInterface->RemoveSimulatedBody(m_editorSceneHandle, m_editorBodyHandle);
-        }
+        // m_sceneInterface = AZ::Interface<AzPhysics::SceneInterface>::Get();
+        // if (m_sceneInterface)
+        // {
+        //     m_sceneInterface->RemoveSimulatedBody(m_editorSceneHandle, m_editorBodyHandle);
+        // }
+        
+        // if (m_proxyShapeConfiguration.m_cookedMesh.GetCachedNativeMesh())
+        // {
+        //     b3DestroyHull(static_cast<b3HullData*>(m_proxyShapeConfiguration.m_cookedMesh.GetCachedNativeMesh()));
+        // }
     }
 
     AZ::u32 EditorShapeColliderComponent::OnConfigurationChanged()
@@ -446,7 +451,6 @@ namespace B3
         auto buildGameEntityScaledPrimitive = [gameEntity](AZStd::shared_ptr<Physics::ColliderConfiguration>& colliderConfig,
             Physics::ShapeConfiguration& shapeConfig, AZ::u8 subdivisionLevel)
         {
-            // We don't scale the hull here since Box3D has a utility for this
             auto primitiveHullConfig = Utils::CreateConvexPointsFromPrimitive(*colliderConfig,
                 shapeConfig, subdivisionLevel, shapeConfig.m_scale);
             if (primitiveHullConfig.has_value())
@@ -477,7 +481,6 @@ namespace B3
             colliderComponent = gameEntity->CreateComponent<BoxColliderComponent>();
             colliderComponent->SetShapeConfigurationList({ AZStd::make_pair(sharedColliderConfig,
                 AZStd::make_shared<Physics::BoxShapeConfiguration>(m_proxyShapeConfiguration.m_box)) });
-
             break;
         case Physics::ShapeType::Capsule:
             if (!m_hasNonUniformScale)
@@ -492,7 +495,8 @@ namespace B3
             }
             break;
         case Physics::ShapeType::Cylinder: // Box3D has utility functions to make scaled cylinders
-            // UpdateCylinderConvexHull();
+            UpdateCylinderCookedMesh(); // This is to build a mesh for debug draw
+            
             // buildGameEntityScaledPrimitive(
             //     sharedColliderConfig, m_proxyShapeConfiguration.m_cylinder, m_proxyShapeConfiguration.m_subdivisionLevel);
             
@@ -1048,6 +1052,11 @@ namespace B3
 
     void EditorShapeColliderComponent::UpdateCylinderCookedMesh()
     {
+        if (m_proxyShapeConfiguration.m_cookedMesh.GetCachedNativeMesh())
+        {
+            b3DestroyHull(static_cast<b3HullData*>(m_proxyShapeConfiguration.m_cookedMesh.GetCachedNativeMesh()));
+        }
+                
         const AZ::u8 subdivisionCount = m_proxyShapeConfiguration.m_cylinder.m_subdivisionCount;
         const float height = m_proxyShapeConfiguration.m_cylinder.m_height;
         const float radius = m_proxyShapeConfiguration.m_cylinder.m_radius;
@@ -1078,7 +1087,26 @@ namespace B3
              return colliderLocalTransform.TransformPoint(point);
          });
         
-        m_proxyShapeConfiguration.m_cookedMesh = Utils::CreateCookedMeshConfiguration(samplePoints, scale).value();
+        AZStd::vector<b3Vec3> b3Points;
+        b3Points.reserve(samplePoints.size());
+            
+        for (const auto& point : samplePoints)
+        {
+            b3Points.push_back(Box3DMathConvert(point));
+        }
+            
+        int size = static_cast<int>(b3Points.size());
+        b3HullData* convexHull = b3CreateHull(b3Points.data(), size, size);
+            
+        if (convexHull == nullptr)
+        {
+            AZ_Error("Box3D", false, "Box3D cooking of mesh data failed")
+        }
+            
+        m_proxyShapeConfiguration.m_cookedMesh.SetCookedMeshData(nullptr, 0, Physics::CookedMeshShapeConfiguration::MeshType::Convex); // Only way to set mesh type
+        m_proxyShapeConfiguration.m_cookedMesh.SetCachedNativeMesh(convexHull);
+        m_proxyShapeConfiguration.m_cookedMesh.m_scale = scale;
+        // m_proxyShapeConfiguration.m_cookedMesh = Utils::CreateCookedMeshConfiguration(samplePoints, scale).value(); // TODO: CookedMeshConfig clears cahched ptr on copy assign
     }
 
     AZ::Aabb EditorShapeColliderComponent::GetWorldBounds() const

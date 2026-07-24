@@ -104,7 +104,7 @@ namespace B3
         
         // 255 is the hard limit for PhysX number of vertices/faces. Upper bound is set to something sensible and less than this hard limit.
         constexpr AZ::u8 MinFrustumSubdivisions = 3;
-        constexpr AZ::u8 MaxFrustumSubdivisions = 125;
+        constexpr AZ::u8 MaxFrustumSubdivisions = 32;
         
         //! Creates the points for a given frustum along the z axis as specified by the supplied arguments. Does not scale points.
         //!
