@@ -98,6 +98,7 @@ namespace B3
         constexpr AZ::u8 MaxCapsuleSubdivisionLevel = 5;
         //! @}
         
+        // TODO: maybe this should just return points since we can't copy cached pointer
         AZStd::optional<Physics::CookedMeshShapeConfiguration> CreateConvexPointsFromPrimitive(
             const Physics::ColliderConfiguration& colliderConfig,
             const Physics::ShapeConfiguration& primitiveShapeConfig, AZ::u8 subdivisionLevel, const AZ::Vector3& scale);

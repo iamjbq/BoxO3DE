@@ -1073,40 +1073,44 @@ namespace B3
              return;
         }
         
-        AZStd::vector<AZ::Vector3> samplePoints = Utils::CreatePointsAtFrustumExtents(height, radius, radius, subdivisionCount).value();
-        
+        // AZStd::vector<AZ::Vector3> samplePoints = Utils::CreatePointsAtFrustumExtents(height, radius, radius, subdivisionCount).value();
+        //
         const AZ::Transform colliderLocalTransform = GetColliderLocalTransform();
         const AZ::Vector3 scale = m_proxyShapeConfiguration.m_cylinder.m_scale;
+        //
+        // AZStd::transform(
+        //  samplePoints.begin(),
+        //  samplePoints.end(),
+        //  samplePoints.begin(),
+        //  [&colliderLocalTransform](const AZ::Vector3& point)
+        //  {
+        //      return colliderLocalTransform.TransformPoint(point);
+        //  });
+        //
+        // AZStd::vector<b3Vec3> b3Points;
+        // b3Points.reserve(samplePoints.size());
+        //     
+        // for (const auto& point : samplePoints)
+        // {
+        //     b3Points.push_back(Box3DMathConvert(point));
+        // }
+        //     
+        // int size = static_cast<int>(b3Points.size());
+        // b3HullData* convexHull = b3CreateHull(b3Points.data(), size, size);
+        //     
+        // if (convexHull == nullptr)
+        // {
+        //     AZ_Error("Box3D", false, "Box3D cooking of mesh data failed")
+        // }
         
-        AZStd::transform(
-         samplePoints.begin(),
-         samplePoints.end(),
-         samplePoints.begin(),
-         [&colliderLocalTransform](const AZ::Vector3& point)
-         {
-             return colliderLocalTransform.TransformPoint(point);
-         });
+        b3HullData* cylinder = b3CreateCylinder(height, radius, 0.0f, subdivisionCount);
+        b3HullData* convexHull = b3CloneAndTransformHull(cylinder, Box3DMathConvert(colliderLocalTransform), b3Vec3_one);
+        b3DestroyHull(cylinder);
         
-        AZStd::vector<b3Vec3> b3Points;
-        b3Points.reserve(samplePoints.size());
-            
-        for (const auto& point : samplePoints)
-        {
-            b3Points.push_back(Box3DMathConvert(point));
-        }
-            
-        int size = static_cast<int>(b3Points.size());
-        b3HullData* convexHull = b3CreateHull(b3Points.data(), size, size);
-            
-        if (convexHull == nullptr)
-        {
-            AZ_Error("Box3D", false, "Box3D cooking of mesh data failed")
-        }
-            
         m_proxyShapeConfiguration.m_cookedMesh.SetCookedMeshData(nullptr, 0, Physics::CookedMeshShapeConfiguration::MeshType::Convex); // Only way to set mesh type
         m_proxyShapeConfiguration.m_cookedMesh.SetCachedNativeMesh(convexHull);
         m_proxyShapeConfiguration.m_cookedMesh.m_scale = scale;
-        // m_proxyShapeConfiguration.m_cookedMesh = Utils::CreateCookedMeshConfiguration(samplePoints, scale).value(); // TODO: CookedMeshConfig clears cahched ptr on copy assign
+        // m_proxyShapeConfiguration.m_cookedMesh = Utils::CreateCookedMeshConfiguration(samplePoints, scale).value(); // CookedMeshConfig clears cached ptr on copy assign
     }
 
     AZ::Aabb EditorShapeColliderComponent::GetWorldBounds() const

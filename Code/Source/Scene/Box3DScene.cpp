@@ -198,11 +198,11 @@ namespace B3
             worldDef.userData = this;
             worldDef.capacity = worldCapacity;
             if (box3d_multithreadedSimulation)
-                worldDef.workerCount = AZStd::thread::hardware_concurrency(); // Internally capped at 32
+                worldDef.workerCount = AZStd::min(AZStd::thread::hardware_concurrency(), static_cast<uint32_t>(4)); // Internally capped at 32
             
             m_worldId = b3CreateWorld(&worldDef);
             m_worldIdPtr = AZStd::make_shared<b3WorldId>(m_worldId);
-            AZ_Assert(b3World_IsValid(m_worldId), "B3::Box3DScene world creation failed");
+            AZ_Assert(b3World_IsValid(m_worldId), "B3::Box3DScene world creation failed")
         }
         
     }
