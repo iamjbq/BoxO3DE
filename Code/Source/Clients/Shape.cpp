@@ -169,7 +169,7 @@ namespace B3
         }
         else
         {
-            AZ_Warning("Box3D Shape", false, "Trying to assign material of unknown type");
+            AZ_Warning("Box3D Shape", false, "Trying to assign material of unknown type")
         }
     }
 
@@ -321,7 +321,7 @@ namespace B3
             }
         default:
             {
-                AZ_Warning("Physics::Shape", false, "Cannot set local pose. Unknown or unsupported shape type.");
+                AZ_Warning("Physics::Shape", false, "Cannot set local pose. Unknown or unsupported shape type.")
                 break;
             }
         }
@@ -359,7 +359,7 @@ namespace B3
             }
         default:
             {
-                AZ_Warning("Physics::Shape", false, "Cannot set local pose. Unknown or unsupported shape type.");
+                AZ_Warning("Physics::Shape", false, "Cannot set local pose. Unknown or unsupported shape type.")
                 return { AZ::Vector3::CreateZero(), AZ::Quaternion::CreateIdentity() };
             }
         }
@@ -388,7 +388,7 @@ namespace B3
         if (restOffset >= contactOffset)
         {
             AZ_Error("Box3D Shape", false, "Requested rest offset (%e) must be less than contact offset (%e).",
-                restOffset, contactOffset);
+                restOffset, contactOffset)
             return;
         }
         // m_box3DShapePtr->setRestOffset(restOffset);
@@ -398,7 +398,7 @@ namespace B3
     {
         if (contactOffset <= 0.0f)
         {
-            AZ_Error("Box3D Shape", false, "Requested contact offset (%e) must exceed 0.");
+            AZ_Error("Box3D Shape", false, "Requested contact offset (%e) must exceed 0.")
             return;
         }
 
@@ -406,7 +406,7 @@ namespace B3
         if (contactOffset <= restOffset)
         {
             AZ_Error("Box3D Shape", false, "Requested contact offset (%e) must exceed rest offset (%e).",
-                contactOffset, restOffset);
+                contactOffset, restOffset)
             return;
         }
         // m_box3DShapePtr->setContactOffset(contactOffset);
@@ -559,7 +559,7 @@ namespace B3
 
     void Shape::GetGeometry(AZStd::vector<AZ::Vector3>& vertices, AZStd::vector<AZ::u32>& indices, const AZ::Aabb* optionalBounds) const
     {
-        AZ_UNUSED_3(vertices, indices, optionalBounds);
+        AZ_UNUSED_3(vertices, indices, optionalBounds)
         // if (!m_box3DShapePtr)
         // {
         //     return;

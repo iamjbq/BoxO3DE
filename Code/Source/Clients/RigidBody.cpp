@@ -111,7 +111,7 @@ namespace B3
     {
         if (b3Body_IsValid(m_bodyId))
         {
-            AZ_Warning("Box3D Rigid Body", false, "Trying to create Box3D rigid actor when it's already created");
+            AZ_Warning("Box3D Rigid Body", false, "Trying to create Box3D rigid actor when it's already created")
             return;
         }
         
@@ -175,13 +175,13 @@ namespace B3
 
         if (!box3DShape)
         {
-            AZ_Error("Box3D Rigid Body", false, "Trying to add a shape of unknown type. Name: %s", GetName().c_str());
+            AZ_Error("Box3D Rigid Body", false, "Trying to add a shape of unknown type. Name: %s", GetName().c_str())
             return;
         }
 
         if (box3DShape->GetShapeConfiguration()->GetShapeType() == Physics::ShapeType::TriangleMesh) // TODO: || !IsKinematic()
         {
-            AZ_Error("Box3D", false, "Cannot use triangle mesh geometry on a dynamic object: %s", GetName().c_str());
+            AZ_Error("Box3D", false, "Cannot use triangle mesh geometry on a dynamic object: %s", GetName().c_str())
             return;
         }
 
@@ -193,21 +193,21 @@ namespace B3
     {
         if (!b3Body_IsValid(m_bodyId))
         {
-            AZ_Warning("B3::RigidBody", false, "Trying to remove shape from rigid body with no actor");
+            AZ_Warning("B3::RigidBody", false, "Trying to remove shape from rigid body with no actor")
             return;
         }
 
         auto box3DShape = AZStd::rtti_pointer_cast<B3::Shape>(shape);
         if (!box3DShape)
         {
-            AZ_Warning("B3::RigidBody", false, "Trying to remove shape of unknown type", GetName().c_str());
+            AZ_Warning("B3::RigidBody", false, "Trying to remove shape of unknown type", GetName().c_str())
             return;
         }
 
         const auto found = AZStd::find(m_shapes.begin(), m_shapes.end(), shape);
         if (found == m_shapes.end())
         {
-            AZ_Warning("B3::RigidBody", false, "Shape has not been attached to this rigid body: %s", GetName().c_str());
+            AZ_Warning("B3::RigidBody", false, "Shape has not been attached to this rigid body: %s", GetName().c_str())
             return;
         }
         
@@ -217,7 +217,7 @@ namespace B3
 
     void RigidBody::UpdateMassProperties(AzPhysics::MassComputeFlags flags, const AZ::Vector3& centerOfMassOffsetOverride, const AZ::Matrix3x3& inertiaTensorOverride, const float massOverride)
     {
-        AZ_UNUSED_4(flags, centerOfMassOffsetOverride, inertiaTensorOverride, massOverride);
+        AZ_UNUSED_4(flags, centerOfMassOffsetOverride, inertiaTensorOverride, massOverride)
         // const bool computeCenterOfMass = AzPhysics::MassComputeFlags::COMPUTE_COM == (flags & AzPhysics::MassComputeFlags::COMPUTE_COM);
         // const bool computeInertiaTensor = AzPhysics::MassComputeFlags::COMPUTE_INERTIA == (flags & AzPhysics::MassComputeFlags::COMPUTE_INERTIA);
         // const bool computeMass = AzPhysics::MassComputeFlags::COMPUTE_MASS == (flags & AzPhysics::MassComputeFlags::COMPUTE_MASS);
@@ -490,7 +490,7 @@ namespace B3
 
         const b3MassData box3DMassProperties = [this, &box3DShapes]
         {
-            AZ_UNUSED(box3DShapes);
+            AZ_UNUSED(box3DShapes)
             // Note: Box3D computeMassPropertiesFromShapes function does not use densities
             //       to compute the shape's masses, which are needed to calculate the center of mass.
             //       This differs from updateMassAndInertia function, which uses material density values.
@@ -560,7 +560,7 @@ namespace B3
         {
             if (IsKinematic())
             {
-                AZ_Warning("Box3D Rigid Body", false, "ApplyLinearImpulse is only valid if the rigid body is not kinematic. Name: %s", GetName().c_str());
+                AZ_Warning("Box3D Rigid Body", false, "ApplyLinearImpulse is only valid if the rigid body is not kinematic. Name: %s", GetName().c_str())
                 return;
             }
             b3Body_ApplyLinearImpulseToCenter(m_bodyId, Box3DMathConvert(impulse), true);
@@ -573,7 +573,7 @@ namespace B3
         {
             if (IsKinematic())
             {
-                AZ_Warning("Box3D Rigid Body", false, "ApplyLinearImpulseAtWorldPoint is only valid if the rigid body is not kinematic. Name: %s", GetName().c_str());
+                AZ_Warning("Box3D Rigid Body", false, "ApplyLinearImpulseAtWorldPoint is only valid if the rigid body is not kinematic. Name: %s", GetName().c_str())
                 return;
             }
             b3Body_ApplyLinearImpulse(m_bodyId, Box3DMathConvert(impulse), Box3DMathConvert(worldPoint), true);
@@ -586,7 +586,7 @@ namespace B3
         {
             if (IsKinematic())
             {
-                AZ_Warning("Box3D Rigid Body", false, "ApplyAngularImpulse is only valid if the rigid body is not kinematic. Name: %s", GetName().c_str());
+                AZ_Warning("Box3D Rigid Body", false, "ApplyAngularImpulse is only valid if the rigid body is not kinematic. Name: %s", GetName().c_str())
                 return;
             }
 
@@ -614,7 +614,7 @@ namespace B3
                         "Box3D Rigid Body",
                         false,
                         "Cannot set kinematic to false, because body has triangle mesh, plane or heightfield shapes attached. Name: %s",
-                        GetName().c_str());
+                        GetName().c_str())
                     return;
                 }
             }
@@ -648,7 +648,7 @@ namespace B3
         }
         else
         {
-            AZ_Error("Box3D Rigid Body", false, "SetKinematicTarget is only valid if rigid body is kinematic. Name: %s", GetName().c_str());
+            AZ_Error("Box3D Rigid Body", false, "SetKinematicTarget is only valid if rigid body is kinematic. Name: %s", GetName().c_str())
         }
     }
 
@@ -770,7 +770,7 @@ namespace B3
     {
         if (damping < 0.0f)
         {
-            AZ_Warning("Box3D Rigid Body", false, "Negative linear damping value (%6.4e). Name: %s", damping, GetName().c_str());
+            AZ_Warning("Box3D Rigid Body", false, "Negative linear damping value (%6.4e). Name: %s", damping, GetName().c_str())
             return;
         }
         if(b3Body_IsValid(m_bodyId))
@@ -792,7 +792,7 @@ namespace B3
     {
         if (damping < 0.0f)
         {
-            AZ_Warning("Box3D Rigid Body", false, "Negative angular damping value (%6.4e). Name: %s", damping, GetName().c_str());
+            AZ_Warning("Box3D Rigid Body", false, "Negative angular damping value (%6.4e). Name: %s", damping, GetName().c_str())
             return;
         }
 
@@ -840,7 +840,7 @@ namespace B3
     {
         if (threshold < 0.0f)
         {
-            AZ_Warning("Box3D Rigid Body", false, "Negative sleep threshold value (%6.4e). Name: %s", threshold, GetName().c_str());
+            AZ_Warning("Box3D Rigid Body", false, "Negative sleep threshold value (%6.4e). Name: %s", threshold, GetName().c_str())
             return;
         }
 

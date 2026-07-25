@@ -246,12 +246,11 @@ namespace B3
                         AZ_Warning("Box3D Rigid Body", false, "Cached cooked mesh object was null.")
                     }
                     
-                    // TODO: the nativeMeshObject is still null here
                     // Convex mesh points are already transformed so we just scale here
                     newShapeId = b3CreateTransformedHullShape(bodyId, &shapeDef, nativeMeshObject, b3Transform_identity, Box3DMathConvert(cookedMeshShapeConfig.m_scale));
                     if (b3Shape_IsValid(newShapeId))
                         success = true;
-                    // b3DestroyHull(nativeMeshObject); // TODO: Unsure if we should do this here or on config
+                    b3DestroyHull(nativeMeshObject);
                     break;
                 }
             case Physics::ShapeType::Heightfield:
@@ -482,7 +481,7 @@ namespace B3
         //     }
         // }
         
-        AZStd::optional<Physics::CookedMeshShapeConfiguration> CreateConvexPointsFromPrimitive(
+        AZStd::vector<AZ::Vector3> CreateConvexPointsFromPrimitive(
             const Physics::ColliderConfiguration& colliderConfig,
             const Physics::ShapeConfiguration& primitiveShapeConfig, AZ::u8 subdivisionLevel,
             [[maybe_unused]] const AZ::Vector3& scale)
@@ -494,15 +493,15 @@ namespace B3
                 return colliderConfig.m_rotation.TransformVector(point) + colliderConfig.m_position;
             };
             
-            Physics::CookedMeshShapeConfiguration convexConfig;
+            // Physics::CookedMeshShapeConfiguration convexConfig;
             
-            AZStd::vector<AZ::Vector3> points;
-            switch (auto shapeType = primitiveShapeConfig.GetShapeType())
+            switch (primitiveShapeConfig.GetShapeType())
             {
             case Physics::ShapeType::Box:
             {
                 auto boxConfig = static_cast<const Physics::BoxShapeConfiguration&>(primitiveShapeConfig);
-                
+                AZStd::vector<AZ::Vector3> points;
+                    
                 points.reserve(8);
                 const float x = 0.5f * boxConfig.m_dimensions.GetX();
                 const float y = 0.5f * boxConfig.m_dimensions.GetY();
@@ -516,11 +515,14 @@ namespace B3
                 points.push_back(applyColliderOffset(AZ::Vector3(+x, +y, -z)));
                 points.push_back(applyColliderOffset(AZ::Vector3(+x, +y, +z)));
 
-                return CreateCookedMeshConfiguration(points, scale);
+                // return CreateCookedMeshConfiguration(points, scale);
+                return points;
             }
             case Physics::ShapeType::Capsule:
             {
                 auto capsuleConfig = static_cast<const Physics::CapsuleShapeConfiguration&>(primitiveShapeConfig);
+                AZStd::vector<AZ::Vector3> points;
+                    
                 const AZ::u8 numLayers = subdivisionLevelClamped;
                 const AZ::u8 numPerLayer = 4 * subdivisionLevelClamped;
                 points.reserve(2 * numLayers * numPerLayer + 2);
@@ -541,11 +543,14 @@ namespace B3
                     }
                 }
                     
-                return CreateCookedMeshConfiguration(points, scale);
+                // return CreateCookedMeshConfiguration(points, scale);
+                return points;
             }
             case Physics::ShapeType::Sphere:
             {
                 auto sphereConfig = static_cast<const Physics::SphereShapeConfiguration&>(primitiveShapeConfig);
+                AZStd::vector<AZ::Vector3> points;
+                    
                 const AZ::u8 numLayers = 2 * subdivisionLevelClamped;
                 const AZ::u8 numPerLayer = 4 * subdivisionLevelClamped;
                 points.reserve((numLayers - 1) * numPerLayer + 2);
@@ -565,15 +570,16 @@ namespace B3
                     }
                 }
                 
-                return CreateCookedMeshConfiguration(points, scale);
+                // return CreateCookedMeshConfiguration(points, scale);
+                return points;
             }
             case Physics::ShapeType::Cylinder:
                 AZ_Error("Box3D Utils", false, "CreateConvexPointsFromPrimitive was called with a cylinder shape configuration.")
                 return {};
             // case Physics::ShapeType::ConvexHull:
             //     return static_cast<const Physics::ConvexHullShapeConfiguration&>(primitiveShapeConfig);
-            case Physics::ShapeType::CookedMesh:
-                return static_cast<const Physics::CookedMeshShapeConfiguration&>(primitiveShapeConfig);
+            // case Physics::ShapeType::CookedMesh:
+            //     return static_cast<const Physics::CookedMeshShapeConfiguration&>(primitiveShapeConfig);
             default:
                 AZ_Error("Box3D Utils", false, "CreateConvexPointsFromPrimitive was called with a non-primitive shape configuration.")
                 return {};

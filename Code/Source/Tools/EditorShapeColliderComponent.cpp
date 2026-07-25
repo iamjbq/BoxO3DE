@@ -451,16 +451,35 @@ namespace B3
         auto buildGameEntityScaledPrimitive = [gameEntity](AZStd::shared_ptr<Physics::ColliderConfiguration>& colliderConfig,
             Physics::ShapeConfiguration& shapeConfig, AZ::u8 subdivisionLevel)
         {
-            auto primitiveHullConfig = Utils::CreateConvexPointsFromPrimitive(*colliderConfig,
+            auto primitiveHullPoints = Utils::CreateConvexPointsFromPrimitive(*colliderConfig,
                 shapeConfig, subdivisionLevel, shapeConfig.m_scale);
-            if (primitiveHullConfig.has_value())
+            
+            AZStd::vector<b3Vec3> b3Points;
+            b3Points.reserve(primitiveHullPoints.size());
+            for (const auto& point : primitiveHullPoints)
             {
-                colliderConfig->m_rotation = AZ::Quaternion::CreateIdentity();
-                colliderConfig->m_position = AZ::Vector3::CreateZero();
-                BaseColliderComponent* colliderComponent = gameEntity->CreateComponent<BaseColliderComponent>();
-                colliderComponent->SetShapeConfigurationList({ AZStd::make_pair(colliderConfig,
-                    AZStd::make_shared<Physics::CookedMeshShapeConfiguration>(primitiveHullConfig.value())) });
+                b3Points.push_back(Box3DMathConvert(point));
             }
+            
+            int size = static_cast<int>(b3Points.size());
+            b3HullData* hull = b3CreateHull(b3Points.data(), size, size);
+            
+            if (hull == nullptr)
+            {
+                AZ_Error("EditorShapeColliderComponent::BuildGameEntity", false, "Failed to build scaled primitive mesh")
+                return;
+            }
+            
+            Physics::CookedMeshShapeConfiguration primitiveConfig;
+            primitiveConfig.SetCookedMeshData(nullptr, 0, Physics::CookedMeshShapeConfiguration::MeshType::Convex);
+            primitiveConfig.SetCachedNativeMesh(hull);
+            primitiveConfig.m_scale = shapeConfig.m_scale;
+            
+            colliderConfig->m_rotation = AZ::Quaternion::CreateIdentity();
+            colliderConfig->m_position = AZ::Vector3::CreateZero();
+            BaseColliderComponent* colliderComponent = gameEntity->CreateComponent<BaseColliderComponent>();
+            colliderComponent->SetShapeConfigurationList({ AZStd::make_pair(colliderConfig,
+                AZStd::make_shared<Physics::CookedMeshShapeConfiguration>(primitiveConfig)) });
         };
 
         switch (m_proxyShapeConfiguration.m_shapeType)
@@ -602,12 +621,32 @@ namespace B3
         }
         else
         {
-            m_scaledPrimitive = Utils::CreateConvexPointsFromPrimitive(GetColliderConfiguration(), m_proxyShapeConfiguration.GetCurrent(),
+            auto scaledPrimitivePoints = Utils::CreateConvexPointsFromPrimitive(GetColliderConfiguration(), m_proxyShapeConfiguration.GetCurrent(),
                 m_proxyShapeConfiguration.m_subdivisionLevel, m_proxyShapeConfiguration.GetCurrent().m_scale);
+            AZStd::vector<b3Vec3> b3Points;
+            b3Points.reserve(scaledPrimitivePoints.size());
+            
+            for (const auto& point : scaledPrimitivePoints)
+            {
+                b3Points.push_back(Box3DMathConvert(point));
+            }
+            
+            int size = static_cast<int>(b3Points.size());
+            b3HullData* hull = b3CreateHull(b3Points.data(), size, size);
+            
+            if (hull == nullptr)
+            {
+                AZ_Error("EditorShapeColliderComponent::BuildDebugDrawMesh", false, "Failed to build debug draw mesh")
+                return;
+            }
+            
+            m_scaledPrimitive.reset();
+            m_scaledPrimitive.emplace();
             if (m_scaledPrimitive.has_value())
             {
-                // physx::PxGeometryHolder pxGeometryHolder;
-                // Utils::CreatePxGeometryFromConfig(m_scaledPrimitive.value(), pxGeometryHolder); // this will cause the native mesh to be cached
+                m_scaledPrimitive->SetCookedMeshData(nullptr, 0, Physics::CookedMeshShapeConfiguration::MeshType::Convex);
+                m_scaledPrimitive->SetCachedNativeMesh(hull);
+                
                 m_colliderDebugDraw.BuildMeshes(m_scaledPrimitive.value(), shapeIndex);
             }
         }
@@ -1007,6 +1046,11 @@ namespace B3
     
     void EditorShapeColliderComponent::UpdateSphereCookedMesh()
     {
+        if (m_proxyShapeConfiguration.m_cookedMesh.GetCachedNativeMesh())
+        {
+            b3DestroyHull(static_cast<b3HullData*>(m_proxyShapeConfiguration.m_cookedMesh.GetCachedNativeMesh()));
+        }
+        
         const float radius = m_proxyShapeConfiguration.m_cylinder.m_radius;
 
         if (radius <= 0.0f)
@@ -1015,17 +1059,37 @@ namespace B3
             return;
         }
         
-        auto sphereHullConfig = Utils::CreateConvexPointsFromPrimitive(GetColliderConfiguration(), m_proxyShapeConfiguration.m_sphere,
+        auto sphereHullPoints = Utils::CreateConvexPointsFromPrimitive(GetColliderConfiguration(), m_proxyShapeConfiguration.m_sphere,
                 m_proxyShapeConfiguration.m_subdivisionLevel, m_proxyShapeConfiguration.GetCurrent().m_scale);
         
-        if (sphereHullConfig.has_value())
+        AZStd::vector<b3Vec3> b3Points;
+        b3Points.reserve(sphereHullPoints.size());
+            
+        for (const auto& point : sphereHullPoints)
         {
-            m_proxyShapeConfiguration.m_cookedMesh = sphereHullConfig.value();
+            b3Points.push_back(Box3DMathConvert(point));
         }
+            
+        int size = static_cast<int>(b3Points.size());
+        b3HullData* sphereHull = b3CreateHull(b3Points.data(), size, size);
+            
+        if (sphereHull == nullptr)
+        {
+            AZ_Error("Box3D", false, "Box3D cooking of sphere mesh data failed")
+            return;
+        }
+            
+        m_proxyShapeConfiguration.m_cookedMesh.SetCookedMeshData(nullptr, 0, Physics::CookedMeshShapeConfiguration::MeshType::Convex); // Only way to set mesh type
+        m_proxyShapeConfiguration.m_cookedMesh.SetCachedNativeMesh(sphereHull);
     }
 
     void EditorShapeColliderComponent::UpdateCapsuleCookedMesh()
     {
+        if (m_proxyShapeConfiguration.m_cookedMesh.GetCachedNativeMesh())
+        {
+            b3DestroyHull(static_cast<b3HullData*>(m_proxyShapeConfiguration.m_cookedMesh.GetCachedNativeMesh()));
+        }
+        
         const float radius = m_proxyShapeConfiguration.m_capsule.m_radius;
         const float height = m_proxyShapeConfiguration.m_capsule.m_height;
 
@@ -1041,13 +1105,28 @@ namespace B3
             return;
         }
         
-        auto capsuleHullConfig = Utils::CreateConvexPointsFromPrimitive(GetColliderConfiguration(), m_proxyShapeConfiguration.m_capsule,
+        auto capsuleHullPoints = Utils::CreateConvexPointsFromPrimitive(GetColliderConfiguration(), m_proxyShapeConfiguration.m_capsule,
                 m_proxyShapeConfiguration.m_subdivisionLevel, m_proxyShapeConfiguration.GetCurrent().m_scale);
         
-        if (capsuleHullConfig.has_value())
+        AZStd::vector<b3Vec3> b3Points;
+        b3Points.reserve(capsuleHullPoints.size());
+            
+        for (const auto& point : capsuleHullPoints)
         {
-            m_proxyShapeConfiguration.m_cookedMesh = capsuleHullConfig.value();
+            b3Points.push_back(Box3DMathConvert(point));
         }
+            
+        int size = static_cast<int>(b3Points.size());
+        b3HullData* capsuleHull = b3CreateHull(b3Points.data(), size, size);
+            
+        if (capsuleHull == nullptr)
+        {
+            AZ_Error("Box3D", false, "Box3D cooking of capsule mesh data failed")
+            return;
+        }
+            
+        m_proxyShapeConfiguration.m_cookedMesh.SetCookedMeshData(nullptr, 0, Physics::CookedMeshShapeConfiguration::MeshType::Convex); // Only way to set mesh type
+        m_proxyShapeConfiguration.m_cookedMesh.SetCachedNativeMesh(capsuleHull);
     }
 
     void EditorShapeColliderComponent::UpdateCylinderCookedMesh()
@@ -1075,9 +1154,6 @@ namespace B3
         
         // AZStd::vector<AZ::Vector3> samplePoints = Utils::CreatePointsAtFrustumExtents(height, radius, radius, subdivisionCount).value();
         //
-        const AZ::Transform colliderLocalTransform = GetColliderLocalTransform();
-        const AZ::Vector3 scale = m_proxyShapeConfiguration.m_cylinder.m_scale;
-        //
         // AZStd::transform(
         //  samplePoints.begin(),
         //  samplePoints.end(),
@@ -1103,14 +1179,15 @@ namespace B3
         //     AZ_Error("Box3D", false, "Box3D cooking of mesh data failed")
         // }
         
+        const AZ::Transform colliderLocalTransform = GetColliderLocalTransform();
+        const AZ::Vector3 scale = m_proxyShapeConfiguration.m_cylinder.m_scale;
+        
         b3HullData* cylinder = b3CreateCylinder(height, radius, 0.0f, subdivisionCount);
         b3HullData* convexHull = b3CloneAndTransformHull(cylinder, Box3DMathConvert(colliderLocalTransform), b3Vec3_one);
         b3DestroyHull(cylinder);
         
         m_proxyShapeConfiguration.m_cookedMesh.SetCookedMeshData(nullptr, 0, Physics::CookedMeshShapeConfiguration::MeshType::Convex); // Only way to set mesh type
         m_proxyShapeConfiguration.m_cookedMesh.SetCachedNativeMesh(convexHull);
-        m_proxyShapeConfiguration.m_cookedMesh.m_scale = scale;
-        // m_proxyShapeConfiguration.m_cookedMesh = Utils::CreateCookedMeshConfiguration(samplePoints, scale).value(); // CookedMeshConfig clears cached ptr on copy assign
     }
 
     AZ::Aabb EditorShapeColliderComponent::GetWorldBounds() const
