@@ -608,16 +608,16 @@ namespace B3
     void EditorShapeColliderComponent::BuildDebugDrawMesh() const
     {
         const AZ::u32 shapeIndex = 0; // Only one mesh gets built from the primitive collider, hence use geomIndex 0.
-        if (m_proxyShapeConfiguration.IsCylinderConfig()) // TODO: verify correct filtering
+        if (m_proxyShapeConfiguration.IsCylinderConfig())
         {
             // physx::PxGeometryHolder pxGeometryHolder;
             // Utils::CreatePxGeometryFromConfig( // This takes the points created from FrustumExtents and builds geometry
             //     m_proxyShapeConfiguration.m_cylinder.m_configuration, pxGeometryHolder); // this will cause the native mesh to be cached
-            m_colliderDebugDraw.BuildMeshes(m_proxyShapeConfiguration.m_cookedMesh, shapeIndex);
+            m_colliderDebugDraw.BuildMeshes(m_proxyShapeConfiguration.m_cookedMesh, shapeIndex); // TODO: works but runtime component doesn't scale
         }
         else if (!m_hasNonUniformScale)
         {
-            m_colliderDebugDraw.BuildMeshes(m_proxyShapeConfiguration.GetCurrent(), shapeIndex);
+            m_colliderDebugDraw.BuildMeshes(m_proxyShapeConfiguration.GetCurrent(), shapeIndex); // works
         }
         else
         {

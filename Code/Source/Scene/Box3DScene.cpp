@@ -153,6 +153,20 @@ namespace B3
             // return controller;
             return nullptr;
         }
+        
+        /// This intentionally provides no context objects because this is called from a worker thread.
+        /// @warning This function should not attempt to modify Box3D state or user application state.
+        // static float b3FrictionCallback(float frictionA, uint64_t userMaterialIdA, float frictionB, uint64_t userMaterialIdB)
+        // {
+        //     // TODO: need a way to trace userMaterialId back to runtime material
+        // }
+        
+        /// This intentionally provides no context objects because this is called from a worker thread.
+        /// @warning This function should not attempt to modify Box3D state or user application state.
+        // static float b3RestitutionCallback(float restitutionA, uint64_t userMaterialIdA, float restitutionB, uint64_t userMaterialIdB)
+        // {
+        //     
+        // }
     }
     
     Box3DScene::Box3DScene(const AzPhysics::SceneConfiguration& config, const AzPhysics::SceneHandle& sceneHandle)
@@ -203,6 +217,9 @@ namespace B3
             m_worldId = b3CreateWorld(&worldDef);
             m_worldIdPtr = AZStd::make_shared<b3WorldId>(m_worldId);
             AZ_Assert(b3World_IsValid(m_worldId), "B3::Box3DScene world creation failed")
+            
+            // b3World_SetFrictionCallback(m_worldId, &Internal::b3FrictionCallback);
+            // b3World_SetRestitutionCallback(m_worldId, &Internal::b3RestitutionCallback);
         }
     }
 
@@ -258,69 +275,6 @@ namespace B3
         {
             return;
         }
-
-        // {
-        //     AZ_PROFILE_SCOPE(Physics, "Box3DScene::CheckResults");
-        //
-        //     // Wait for the simulation to complete.
-        //     // In the multithreaded environment we need to make sure we don't lock the scene for write here.
-        //     // This is because contact modification callbacks can be issued from the job threads and cause deadlock
-        //     // due to the callback code locking the scene.
-        //     // https://devtalk.nvidia.com/default/topic/1024408/pxcontactmodifycallback-and-pxscene-locking/
-        //     m_pxScene->checkResults(true);
-        // }
-        //
-        // bool activeActorsEnabled = false;
-        // {
-        //     AZ_PROFILE_SCOPE(Physics, "Box3DScene::FetchResults");
-        //     PHYSX_SCENE_WRITE_LOCK(m_pxScene);
-        //
-        //     activeActorsEnabled = m_pxScene->getFlags() & physx::PxSceneFlag::eENABLE_ACTIVE_ACTORS;
-        //
-        //     // Swap the buffers, invoke callbacks, build the list of active actors.
-        //     m_pxScene->fetchResults(true);
-        // }
-        //
-        // if (activeActorsEnabled)
-        // {
-        //     AZ_PROFILE_SCOPE(Physics, "Box3DScene::ActiveActors");
-        //
-        //     AzPhysics::SimulatedBodyHandleList activeBodyHandles;
-        //
-        //     {
-        //         PHYSX_SCENE_READ_LOCK(m_pxScene);
-        //         physx::PxU32 numActiveActors = 0;
-        //         physx::PxActor** activeActors = m_pxScene->getActiveActors(numActiveActors);
-        //         activeBodyHandles.reserve(numActiveActors);
-        //         for (physx::PxU32 i = 0; i < numActiveActors; ++i)
-        //         {
-        //             if (ActorData* actorData = Utils::GetUserData(activeActors[i]))
-        //             {
-        //                 activeBodyHandles.emplace_back(actorData->GetBodyHandle());
-        //             }
-        //         }
-        //     }
-        //
-        //     // Keep the event signal outside of the scene lock since there may be handlers that want to lock the scene for write
-        //     m_sceneActiveSimulatedBodies.Signal(m_sceneHandle, activeBodyHandles, m_currentDeltaTime);
-        //
-        //     if (physx_batchTransformSync)
-        //     {
-        //         m_queuedActiveBodyIndices.IncreaseCapacity(activeBodyHandles.size());
-        //
-        //         for (const AzPhysics::SimulatedBodyHandle& bodyHandle : activeBodyHandles)
-        //         {
-        //             AzPhysics::SimulatedBodyIndex bodyIndex = AZStd::get<1>(bodyHandle);
-        //             m_queuedActiveBodyIndices.Insert(bodyIndex);
-        //         }
-        //
-        //         m_accumulatedDeltaTime += m_currentDeltaTime;
-        //     }
-        //     else
-        //     {
-        //         SyncActiveBodyTransform(activeBodyHandles);
-        //     }
-        // }
         
         {
             AZ_PROFILE_SCOPE(Physics, "Box3DScene::BodyEvents");
@@ -343,42 +297,126 @@ namespace B3
                 }
             }
             
-            // TODO: collect collision and sensor events here for processing
-            // Utility function to call OnCollide like with Jolt possibly
-            // for (int i = 0; i < contactEvents.beginCount; ++i)
-            // {
-            //     b3ContactBeginTouchEvent* beginEvent = contactEvents.beginEvents + i;
-            //     ShapesStartTouching(beginEvent->shapeIdA, beginEvent->shapeIdB);
-            // }
+            // Contact events
+            {
+                // PhysX set to 10, Jolt provides up to 64 points, no limit for Box3D?
+                static constexpr const AZ::u32 MaxPointsToReport = 10;
+                
+                b3ContactEvents contactEvents = b3World_GetContactEvents(m_worldId);
+                
+                // TODO: collect collision and sensor events here for processing
+                // Utility function to call OnCollide like with Jolt possibly
+                for (int i = 0; i < contactEvents.beginCount; ++i)
+                {
+                    b3ContactBeginTouchEvent* beginEvent = contactEvents.beginEvents + i;
+                    
+                    if (!b3Contact_IsValid(beginEvent->contactId))
+                    {
+                        AZ_Warning("Box3D", false, "Begin Contact: Invalid contact Id")
+                        return;
+                    }
+                    
+                    b3BodyId bodyA = b3Shape_GetBody(beginEvent->shapeIdA);
+                    b3BodyId bodyB = b3Shape_GetBody(beginEvent->shapeIdB);
+                
+                    BodyData* bodyData1 = Utils::GetUserData(bodyA);
+                    BodyData* bodyData2 = Utils::GetUserData(bodyB);
+
+                    // Missing user data, or user data was invalid
+                    if (!bodyData1 || !bodyData2)
+                    {
+                        AZ_Warning("Box3D", false, "Invalid user data set for objects Obj0:%p Obj1:%p", bodyData1, bodyData2)
+                    }
+
+                    AzPhysics::SimulatedBody* body1 = bodyData1->GetSimulatedBody();
+                    AzPhysics::SimulatedBody* body2 = bodyData2->GetSimulatedBody();
+
+                    if (!body1 || !body2)
+                    {
+                        AZ_Warning("Box3D", false, "Invalid body data set for objects Obj0:%p Obj1:%p", body1, body2)
+                    }
+
+                    Physics::Shape* shape1 = Utils::GetUserData(beginEvent->shapeIdA);
+                    Physics::Shape* shape2 = Utils::GetUserData(beginEvent->shapeIdB);
+
+                    if (!shape1 || !shape2)
+                    {
+                        AZ_Warning("Box3D", false, "Invalid shape user data set for objects Obj0:%p Obj1:%p", shape1, shape2)
+                    }
+                
+                    // Collision Event
+                    AzPhysics::CollisionEvent collision;
+                    collision.m_type = AzPhysics::CollisionEvent::Type::Begin; // TODO: need to get persist bool from manifold point
+                    collision.m_bodyHandle1 = bodyData1->GetBodyHandle();
+                    collision.m_body1 = body1;
+                    collision.m_bodyHandle2 = bodyData2->GetBodyHandle();
+                    collision.m_body2 = body2;
+                    collision.m_shape1 = shape1;
+                    collision.m_shape2 = shape2;
+                    
+                    b3ContactData contactData = b3Contact_GetData(beginEvent->contactId);
+                    int contactPointCount = 0;
+                    
+                    // Collision point count can only be accessed by looping through manifolds, so we do it twice for now
+                    for (int m = 0; m < contactData.manifoldCount; ++m)
+                    {
+                        const b3Manifold* manifold = contactData.manifolds + m;
+                        contactPointCount += manifold->pointCount;
+                    }
+                    
+                    collision.m_contacts.reserve(contactPointCount);
+                    contactPointCount = 0;
+                    for (int m = 0; m < contactData.manifoldCount; ++m)
+                    {
+                        const b3Manifold* manifold = contactData.manifolds + m;
+                        for (int p = 0; p < manifold->pointCount; ++p)
+                        {
+                            b3ManifoldPoint point = manifold->points[p];
+                            // point.persisted
+                            AzPhysics::Contact& contact = collision.m_contacts[contactPointCount];
+                            contact.m_position = Box3DMathConvert(point.anchorA + point.anchorB) * 0.5f;
+                            contact.m_normal = Box3DMathConvert(manifold->normal);
+                            contact.m_impulse = Box3DMathConvert(manifold->normal * point.totalNormalImpulse + manifold->frictionImpulse + manifold->rollingImpulse);
+                            contact.m_separation = point.separation; // Negative values are penetrating
+                            contact.m_internalFaceIndex01 = b3Shape_GetType(beginEvent->shapeIdA) == b3ShapeType::b3_meshShape ? point.triangleIndex : 0;
+                            contact.m_internalFaceIndex02 = b3Shape_GetType(beginEvent->shapeIdB) == b3ShapeType::b3_meshShape ? point.triangleIndex : 0;
+                            
+                            contactPointCount += 1;
+                        }
+                    }
+                    
+                    m_queuedCollisionEvents.emplace_back(collision);
+                }
             
-            // for (int i = 0; i < contactEvents.endCount; ++i)
-            // {
-            //     b3ContactEndTouchEvent* endEvent = contactEvents.endEvents + i;
-            //
-            //     // Use b3Shape_IsValid because a shape may have been destroyed
-            //     if (b3Shape_IsValid(endEvent->shapeIdA) && b3Shape_IsValid(endEvent->shapeIdB))
-            //     {
-            //         ShapesStopTouching(endEvent->shapeIdA, endEvent->shapeIdB);
-            //     }
-            // }
+                for (int i = 0; i < contactEvents.endCount; ++i)
+                {
+                    b3ContactEndTouchEvent* endEvent = contactEvents.endEvents + i;
             
-            // This is meant for determining when to play sounds when b3WorldDef::hitEventThreshold and is manually enabled on shapes
-            // for (int i = 0; i < contactEvents.hitCount; ++i)
-            // {
-            //     b3ContactHitEvent* hitEvent = contactEvents.hitEvents + i;
-            //     if (hitEvent->approachSpeed > 10.0f)
-            //     {
-            //         // play sound
-            //     }
-            // }
+                    // Use b3Shape_IsValid because a shape may have been destroyed
+                    if (b3Shape_IsValid(endEvent->shapeIdA) && b3Shape_IsValid(endEvent->shapeIdB))
+                    {
+                        ShapesStopTouching(endEvent->shapeIdA, endEvent->shapeIdB);
+                    }
+                }
             
-            // b3SensorEvents sensorEvents = b3World_GetSensorEvents(myWorldId);
-            // for (int i = 0; i < sensorEvents.beginCount; ++i)
-            // {
-            //     b3SensorBeginTouchEvent* beginTouch = sensorEvents.beginEvents + i;
-            //     void* myUserData = b3Shape_GetUserData(beginTouch->visitorShapeId);
-            //     // process begin event
-            // }
+                // This is meant for determining when to play sounds when b3WorldDef::hitEventThreshold and is manually enabled on shapes
+                // for (int i = 0; i < contactEvents.hitCount; ++i)
+                // {
+                //     b3ContactHitEvent* hitEvent = contactEvents.hitEvents + i;
+                //     if (hitEvent->approachSpeed > 10.0f)
+                //     {
+                //         // play sound
+                //     }
+                // }
+            
+                // b3SensorEvents sensorEvents = b3World_GetSensorEvents(myWorldId);
+                // for (int i = 0; i < sensorEvents.beginCount; ++i)
+                // {
+                //     b3SensorBeginTouchEvent* beginTouch = sensorEvents.beginEvents + i;
+                //     void* myUserData = b3Shape_GetUserData(beginTouch->visitorShapeId);
+                //     // process begin event
+                // }
+            }
             
             // Keep the event signal outside the scene lock since there may be handlers that want to lock the scene for write
             m_sceneActiveSimulatedBodies.Signal(m_sceneHandle, activeBodyHandles, m_currentDeltaTime);
