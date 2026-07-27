@@ -740,8 +740,67 @@ namespace B3
 
     AzPhysics::SceneQueryHit RigidBody::RayCast(const AzPhysics::RayCastRequest& request)
     {
-        AZ_UNUSED(request);
+        // TODO: Move to helper
         // return B3::SceneQueryHelpers::ClosestRayHitAgainstShapes(request, m_shapes, GetTransform());
+        
+        const b3Vec3 start = Box3DMathConvert(request.m_start);
+        const b3Vec3 translation = Box3DMathConvert(request.m_direction) * request.m_distance;
+        
+        b3QueryFilter filter = b3DefaultQueryFilter();
+        
+        b3BodyCastResult result = b3Body_CastRay(m_bodyId, start, translation, filter, 1.0f, b3Body_GetTransform(m_bodyId));
+        
+        if (!result.hit)
+        {
+            AzPhysics::SceneQueryHit hit;
+            
+            hit.m_distance = b3Distance(result.point, start);
+            hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Distance;
+            
+            hit.m_position = Box3DMathConvert(result.point);
+            hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Position;
+            
+            hit.m_normal = Box3DMathConvert(result.normal);
+            hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Normal;
+            
+            const BodyData* bodyData = Utils::GetUserData(m_bodyId);
+            hit.m_bodyHandle = bodyData->GetBodyHandle();
+            if (hit.m_bodyHandle != AzPhysics::InvalidSimulatedBodyHandle)
+            {
+                hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::BodyHandle;
+            }
+            
+            hit.m_entityId = bodyData->GetEntityId();
+            if (hit.m_entityId.IsValid())
+            {
+                hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::EntityId;
+            }
+            
+            hit.m_shape = Utils::GetUserData(result.shapeId);
+            if (hit.m_shape != nullptr)
+            {
+                hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Shape;
+            }
+            
+            b3SurfaceMaterial material = b3Shape_GetMeshSurfaceMaterial(result.shapeId, result.triangleIndex);
+            
+            if (material.userMaterialId != 0)
+            {
+                // TODO: Implement map to track material Ids (subIds on the MaterialId class)
+                // AZ::Interface<Physics::MaterialManager>::Get()->GetMaterial(material.userMaterialId);
+            }
+            else if (hit.m_shape != nullptr)
+            {
+                hit.m_physicsMaterialId = hit.m_shape->GetMaterialId();
+            }
+            else
+            {
+                hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Material;
+            }
+            
+            return hit;
+        }
+        
         return AzPhysics::SceneQueryHit();
     }
 

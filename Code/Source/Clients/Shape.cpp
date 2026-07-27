@@ -456,9 +456,8 @@ namespace B3
         m_box3DShapePtr.reset();
     }
 
-    AzPhysics::SceneQueryHit Shape::RayCastInternal(const AzPhysics::RayCastRequest& worldSpaceRequest, const b3WorldTransform& pose)
+    AzPhysics::SceneQueryHit Shape::RayCastInternal(const AzPhysics::RayCastRequest& worldSpaceRequest, [[maybe_unused]] const b3WorldTransform& pose)
     {
-        AZ_UNUSED(pose)
         if (const bool shouldCollide = worldSpaceRequest.m_collisionGroup.GetMask() & m_collisionLayer.GetMask();
             !shouldCollide)
         {
@@ -467,11 +466,7 @@ namespace B3
 
         const b3Vec3 start = Box3DMathConvert(worldSpaceRequest.m_start);
         const b3Vec3 translation = Box3DMathConvert(worldSpaceRequest.m_direction) * worldSpaceRequest.m_distance;
-        // const AZ::u32 maxHits = 1;
-        // const physx::PxHitFlags hitFlags = SceneQueryHelpers::GetPxHitFlags(worldSpaceRequest.m_hitFlags);
-        
-        // b3QueryFilter filter = b3DefaultQueryFilter();
-        // b3RayResult result = b3World_CastRayClosest(b3Shape_GetWorld(m_shapeId), start, translation, filter);
+
         b3WorldCastOutput result = b3Shape_RayCast(m_shapeId, start, translation);
         
         if (result.hit)
@@ -510,7 +505,7 @@ namespace B3
             
             if (material.userMaterialId != 0)
             {
-                
+                // TODO: Implement map to track material Ids (subIds on the MaterialId class)
                 // AZ::Interface<Physics::MaterialManager>::Get()->GetMaterial(material.userMaterialId);
             }
             else if (hit.m_shape != nullptr)
@@ -524,6 +519,7 @@ namespace B3
             
             return hit;
         }
+        
         return AzPhysics::SceneQueryHit();
     }
 
