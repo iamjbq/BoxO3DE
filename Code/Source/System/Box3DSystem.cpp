@@ -99,7 +99,7 @@ namespace B3
     // Callback for traces, connect this to your own trace function if you have one
     static void Box3DLogFunction(const char* message)
     {
-        AZ_Warning("Box3D: %s\n", false, message)
+        AZ_Warning("Box3D Engine", false, "%s", message)
     }
     
     //! System allocator to be used for all Box3D gem persistent allocations.
