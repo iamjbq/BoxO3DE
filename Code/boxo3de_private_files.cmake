@@ -61,8 +61,6 @@ set(FILES
     Source/Scene/Box3DScene.h
     Source/Scene/Box3DSceneInterface.cpp
     Source/Scene/Box3DSceneInterface.h
-    Source/Scene/PhysicsSystemCallbacks.cpp
-    Source/Scene/PhysicsSystemCallbacks.h
         
     Source/Material/Box3DMaterial.cpp
     Source/Material/Box3DMaterialConfiguration.cpp
