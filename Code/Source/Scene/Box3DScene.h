@@ -91,6 +91,11 @@ namespace B3
         void EnableSimulationOfBodyInternal(AzPhysics::SimulatedBody& body);
         void DisableSimulationOfBodyInternal(AzPhysics::SimulatedBody& body);
 
+        void OnBeginContact(b3ContactBeginTouchEvent* beginEvent);
+        void OnEndContact(b3ContactEndTouchEvent* endEvent);
+        void OnBeginSensor(b3SensorBeginTouchEvent* beginEvent);
+        void OnEndSensor(b3SensorEndTouchEvent* endEvent);
+        
         void FlushQueuedEvents();
         void ClearDeferedDeletions();
         void ProcessTriggerEvents();

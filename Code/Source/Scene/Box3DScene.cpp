@@ -280,7 +280,6 @@ namespace B3
             AZ_PROFILE_SCOPE(Physics, "Box3DScene::BodyEvents");
             
             AzPhysics::SimulatedBodyHandleList activeBodyHandles;
-            
             {
                 b3BodyEvents bodyEvents = b3World_GetBodyEvents(m_worldId);
                 // int activeBodies = b3World_GetAwakeBodyCount(m_worldId); // This is likely less efficient
@@ -300,12 +299,11 @@ namespace B3
             // Contact events
             {
                 // PhysX set to 10, Jolt provides up to 64 points, no limit for Box3D?
-                static constexpr const AZ::u32 MaxPointsToReport = 10;
+                [[maybe_unused]] static constexpr AZ::u32 MaxPointsToReport = 10;
                 
                 b3ContactEvents contactEvents = b3World_GetContactEvents(m_worldId);
                 
                 // TODO: collect collision and sensor events here for processing
-                // Utility function to call OnCollide like with Jolt possibly
                 for (int i = 0; i < contactEvents.beginCount; ++i)
                 {
                     b3ContactBeginTouchEvent* beginEvent = contactEvents.beginEvents + i;
@@ -316,76 +314,7 @@ namespace B3
                         return;
                     }
                     
-                    b3BodyId bodyA = b3Shape_GetBody(beginEvent->shapeIdA);
-                    b3BodyId bodyB = b3Shape_GetBody(beginEvent->shapeIdB);
-                
-                    BodyData* bodyData1 = Utils::GetUserData(bodyA);
-                    BodyData* bodyData2 = Utils::GetUserData(bodyB);
-
-                    // Missing user data, or user data was invalid
-                    if (!bodyData1 || !bodyData2)
-                    {
-                        AZ_Warning("Box3D", false, "Invalid user data set for objects Obj0:%p Obj1:%p", bodyData1, bodyData2)
-                    }
-
-                    AzPhysics::SimulatedBody* body1 = bodyData1->GetSimulatedBody();
-                    AzPhysics::SimulatedBody* body2 = bodyData2->GetSimulatedBody();
-
-                    if (!body1 || !body2)
-                    {
-                        AZ_Warning("Box3D", false, "Invalid body data set for objects Obj0:%p Obj1:%p", body1, body2)
-                    }
-
-                    Physics::Shape* shape1 = Utils::GetUserData(beginEvent->shapeIdA);
-                    Physics::Shape* shape2 = Utils::GetUserData(beginEvent->shapeIdB);
-
-                    if (!shape1 || !shape2)
-                    {
-                        AZ_Warning("Box3D", false, "Invalid shape user data set for objects Obj0:%p Obj1:%p", shape1, shape2)
-                    }
-                
-                    // Collision Event
-                    AzPhysics::CollisionEvent collision;
-                    collision.m_type = AzPhysics::CollisionEvent::Type::Begin; // TODO: need to get persist bool from manifold point
-                    collision.m_bodyHandle1 = bodyData1->GetBodyHandle();
-                    collision.m_body1 = body1;
-                    collision.m_bodyHandle2 = bodyData2->GetBodyHandle();
-                    collision.m_body2 = body2;
-                    collision.m_shape1 = shape1;
-                    collision.m_shape2 = shape2;
-                    
-                    b3ContactData contactData = b3Contact_GetData(beginEvent->contactId);
-                    int contactPointCount = 0;
-                    
-                    // Collision point count can only be accessed by looping through manifolds, so we do it twice for now
-                    for (int m = 0; m < contactData.manifoldCount; ++m)
-                    {
-                        const b3Manifold* manifold = contactData.manifolds + m;
-                        contactPointCount += manifold->pointCount;
-                    }
-                    
-                    collision.m_contacts.reserve(contactPointCount);
-                    contactPointCount = 0;
-                    for (int m = 0; m < contactData.manifoldCount; ++m)
-                    {
-                        const b3Manifold* manifold = contactData.manifolds + m;
-                        for (int p = 0; p < manifold->pointCount; ++p)
-                        {
-                            b3ManifoldPoint point = manifold->points[p];
-                            // point.persisted
-                            AzPhysics::Contact& contact = collision.m_contacts[contactPointCount];
-                            contact.m_position = Box3DMathConvert(point.anchorA + point.anchorB) * 0.5f;
-                            contact.m_normal = Box3DMathConvert(manifold->normal);
-                            contact.m_impulse = Box3DMathConvert(manifold->normal * point.totalNormalImpulse + manifold->frictionImpulse + manifold->rollingImpulse);
-                            contact.m_separation = point.separation; // Negative values are penetrating
-                            contact.m_internalFaceIndex01 = b3Shape_GetType(beginEvent->shapeIdA) == b3ShapeType::b3_meshShape ? point.triangleIndex : 0;
-                            contact.m_internalFaceIndex02 = b3Shape_GetType(beginEvent->shapeIdB) == b3ShapeType::b3_meshShape ? point.triangleIndex : 0;
-                            
-                            contactPointCount += 1;
-                        }
-                    }
-                    
-                    m_queuedCollisionEvents.emplace_back(collision);
+                    OnBeginContact(beginEvent);
                 }
             
                 for (int i = 0; i < contactEvents.endCount; ++i)
@@ -395,7 +324,7 @@ namespace B3
                     // Use b3Shape_IsValid because a shape may have been destroyed
                     if (b3Shape_IsValid(endEvent->shapeIdA) && b3Shape_IsValid(endEvent->shapeIdB))
                     {
-                        ShapesStopTouching(endEvent->shapeIdA, endEvent->shapeIdB);
+                        OnEndContact(endEvent);
                     }
                 }
             
@@ -409,13 +338,23 @@ namespace B3
                 //     }
                 // }
             
-                // b3SensorEvents sensorEvents = b3World_GetSensorEvents(myWorldId);
-                // for (int i = 0; i < sensorEvents.beginCount; ++i)
-                // {
-                //     b3SensorBeginTouchEvent* beginTouch = sensorEvents.beginEvents + i;
-                //     void* myUserData = b3Shape_GetUserData(beginTouch->visitorShapeId);
-                //     // process begin event
-                // }
+                b3SensorEvents sensorEvents = b3World_GetSensorEvents(m_worldId);
+                for (int i = 0; i < sensorEvents.beginCount; ++i)
+                {
+                    b3SensorBeginTouchEvent* beginTouch = sensorEvents.beginEvents + i;
+                    
+                    OnBeginSensor(beginTouch);
+                }
+                
+                for (int i = 0; i < sensorEvents.endCount; ++i)
+                {
+                    b3SensorEndTouchEvent* endTouch = sensorEvents.endEvents + i;
+                    
+                    if (b3Shape_IsValid(endTouch->sensorShapeId) && b3Shape_IsValid(endTouch->visitorShapeId))
+                    {
+                        OnEndSensor(endTouch);
+                    }
+                }
             }
             
             // Keep the event signal outside the scene lock since there may be handlers that want to lock the scene for write
@@ -890,6 +829,242 @@ namespace B3
         }
         
         body.m_simulating = false;
+    }
+
+    void Box3DScene::OnBeginContact(b3ContactBeginTouchEvent* beginEvent)
+    {
+        b3BodyId bodyA = b3Shape_GetBody(beginEvent->shapeIdA);
+        b3BodyId bodyB = b3Shape_GetBody(beginEvent->shapeIdB);
+    
+        BodyData* bodyData1 = Utils::GetUserData(bodyA);
+        BodyData* bodyData2 = Utils::GetUserData(bodyB);
+
+        // Missing user data, or user data was invalid
+        if (!bodyData1 || !bodyData2)
+        {
+            AZ_Warning("Box3D", false, "Invalid user data set for objects Obj0:%p Obj1:%p", bodyData1, bodyData2)
+        }
+
+        AzPhysics::SimulatedBody* body1 = bodyData1->GetSimulatedBody();
+        AzPhysics::SimulatedBody* body2 = bodyData2->GetSimulatedBody();
+
+        if (!body1 || !body2)
+        {
+            AZ_Warning("Box3D", false, "Invalid body data set for objects Obj0:%p Obj1:%p", body1, body2)
+        }
+
+        Physics::Shape* shape1 = Utils::GetUserData(beginEvent->shapeIdA);
+        Physics::Shape* shape2 = Utils::GetUserData(beginEvent->shapeIdB);
+
+        if (!shape1 || !shape2)
+        {
+            AZ_Warning("Box3D", false, "Invalid shape user data set for objects Obj0:%p Obj1:%p", shape1, shape2)
+        }
+    
+        // Collision Event
+        AzPhysics::CollisionEvent collision;
+        collision.m_bodyHandle1 = bodyData1->GetBodyHandle();
+        collision.m_body1 = body1;
+        collision.m_bodyHandle2 = bodyData2->GetBodyHandle();
+        collision.m_body2 = body2;
+        collision.m_shape1 = shape1;
+        collision.m_shape2 = shape2;
+        
+        b3ContactData contactData = b3Contact_GetData(beginEvent->contactId);
+        // int contactPointCount = 0;
+        
+        // Collision point count can only be accessed by looping through manifolds, so we do it twice for now
+        // for (int m = 0; m < contactData.manifoldCount; ++m)
+        // {
+        //     const b3Manifold* manifold = contactData.manifolds + m;
+        //     contactPointCount += manifold->pointCount;
+        // }
+        
+        // collision.m_contacts.reserve(contactPointCount);
+        // contactPointCount = 0;
+        
+        bool persisted = false;
+        for (int m = 0; m < contactData.manifoldCount; ++m)
+        {
+            const b3Manifold* manifold = contactData.manifolds + m;
+            for (int p = 0; p < manifold->pointCount; ++p)
+            {
+                b3ManifoldPoint point = manifold->points[p];
+                persisted |= point.persisted;
+                
+                // AzPhysics::Contact& contact = collision.m_contacts[contactPointCount];
+                AzPhysics::Contact contact;
+                contact.m_position = Box3DMathConvert(point.anchorA + point.anchorB) * 0.5f;
+                contact.m_normal = Box3DMathConvert(manifold->normal);
+                contact.m_impulse = Box3DMathConvert(manifold->normal * point.totalNormalImpulse + manifold->frictionImpulse + manifold->rollingImpulse);
+                contact.m_separation = point.separation; // Negative values are penetrating
+                contact.m_internalFaceIndex01 = b3Shape_GetType(beginEvent->shapeIdA) == b3ShapeType::b3_meshShape ? point.triangleIndex : 0;
+                contact.m_internalFaceIndex02 = b3Shape_GetType(beginEvent->shapeIdB) == b3ShapeType::b3_meshShape ? point.triangleIndex : 0;
+                
+                collision.m_contacts.emplace_back(contact);
+                // contactPointCount += 1;
+            }
+        }
+        
+        if (persisted)
+        {
+            collision.m_type = AzPhysics::CollisionEvent::Type::Persist;
+        }
+        else
+        {
+            collision.m_type = AzPhysics::CollisionEvent::Type::Begin;
+        }
+        
+        m_queuedCollisionEvents.emplace_back(AZStd::move(collision));
+    }
+
+    void Box3DScene::OnEndContact(b3ContactEndTouchEvent* endEvent)
+    {
+        b3BodyId bodyA = b3Shape_GetBody(endEvent->shapeIdA);
+        b3BodyId bodyB = b3Shape_GetBody(endEvent->shapeIdB);
+    
+        BodyData* bodyData1 = Utils::GetUserData(bodyA);
+        BodyData* bodyData2 = Utils::GetUserData(bodyB);
+
+        // Missing user data, or user data was invalid
+        if (!bodyData1 || !bodyData2)
+        {
+            AZ_Warning("Box3D", false, "Invalid user data set for objects Obj0:%p Obj1:%p", bodyData1, bodyData2)
+        }
+
+        AzPhysics::SimulatedBody* body1 = bodyData1->GetSimulatedBody();
+        AzPhysics::SimulatedBody* body2 = bodyData2->GetSimulatedBody();
+
+        if (!body1 || !body2)
+        {
+            AZ_Warning("Box3D", false, "Invalid body data set for objects Obj0:%p Obj1:%p", body1, body2)
+        }
+
+        Physics::Shape* shape1 = Utils::GetUserData(endEvent->shapeIdA);
+        Physics::Shape* shape2 = Utils::GetUserData(endEvent->shapeIdB);
+
+        if (!shape1 || !shape2)
+        {
+            AZ_Warning("Box3D", false, "Invalid shape user data set for objects Obj0:%p Obj1:%p", shape1, shape2)
+        }
+    
+        // Collision Event
+        AzPhysics::CollisionEvent collision;
+        collision.m_type = AzPhysics::CollisionEvent::Type::End;
+        collision.m_bodyHandle1 = bodyData1->GetBodyHandle();
+        collision.m_body1 = body1;
+        collision.m_bodyHandle2 = bodyData2->GetBodyHandle();
+        collision.m_body2 = body2;
+        collision.m_shape1 = shape1;
+        collision.m_shape2 = shape2;
+        
+        b3ContactData contactData = b3Contact_GetData(endEvent->contactId);
+        bool persisted = false;
+        for (int m = 0; m < contactData.manifoldCount; ++m)
+        {
+            const b3Manifold* manifold = contactData.manifolds + m;
+            for (int p = 0; p < manifold->pointCount; ++p)
+            {
+                b3ManifoldPoint point = manifold->points[p];
+                persisted |= point.persisted;
+                
+                AzPhysics::Contact contact;
+                contact.m_position = Box3DMathConvert(point.anchorA + point.anchorB) * 0.5f;
+                contact.m_normal = Box3DMathConvert(manifold->normal);
+                contact.m_impulse = Box3DMathConvert(manifold->normal * point.totalNormalImpulse + manifold->frictionImpulse + manifold->rollingImpulse);
+                contact.m_separation = point.separation; // Negative values are penetrating
+                contact.m_internalFaceIndex01 = b3Shape_GetType(endEvent->shapeIdA) == b3ShapeType::b3_meshShape ? point.triangleIndex : 0;
+                contact.m_internalFaceIndex02 = b3Shape_GetType(endEvent->shapeIdB) == b3ShapeType::b3_meshShape ? point.triangleIndex : 0;
+                
+                collision.m_contacts.emplace_back(contact);
+            }
+        }
+        
+        m_queuedCollisionEvents.emplace_back(AZStd::move(collision));
+    }
+
+    void Box3DScene::OnBeginSensor(b3SensorBeginTouchEvent* beginEvent)
+    {
+        b3BodyId sensorBodyId = b3Shape_GetBody(beginEvent->sensorShapeId);
+        BodyData* sensorBodyData = Utils::GetUserData(sensorBodyId);
+        AzPhysics::SimulatedBody* sensorBody = sensorBodyData->GetSimulatedBody();
+        if (!sensorBody)
+        {
+            AZ_Error("Box3D", false, "OnBeginSensor:: sensorBody was invalid")
+            return;
+        }
+        if (!sensorBody->GetEntityId().IsValid())
+        {
+            AZ_Warning("Box3D", false, "OnBeginSensor received invalid bodies.")
+            return;
+        }
+
+        b3BodyId visitorBodyId = b3Shape_GetBody(beginEvent->visitorShapeId);
+        BodyData* visitorBodyData = Utils::GetUserData(visitorBodyId);
+        AzPhysics::SimulatedBody* visitorBody = visitorBodyData->GetSimulatedBody();
+        if (!visitorBody)
+        {
+            AZ_Error("Box3D", false, "OnBeginSensor:: visitorBody was invalid")
+            return;
+        }
+        if (!visitorBody->GetEntityId().IsValid())
+        {
+            AZ_Warning("Box3D", false, "OnBeginSensor received invalid bodies.")
+            return;
+        }
+
+        AzPhysics::TriggerEvent trigger;
+        trigger.m_type = AzPhysics::TriggerEvent::Type::Enter;
+        trigger.m_triggerBodyHandle = sensorBodyData->GetBodyHandle();
+        trigger.m_triggerBody = sensorBody;
+        trigger.m_triggerShape = Utils::GetUserData(beginEvent->sensorShapeId);
+        trigger.m_otherBodyHandle = visitorBodyData->GetBodyHandle();
+        trigger.m_otherBody = visitorBody;
+        trigger.m_otherShape = Utils::GetUserData(beginEvent->visitorShapeId);
+        
+        m_queuedTriggerEvents.emplace_back(AZStd::move(trigger));
+    }
+
+    void Box3DScene::OnEndSensor(b3SensorEndTouchEvent* endEvent)
+    {
+        b3BodyId sensorBodyId = b3Shape_GetBody(endEvent->sensorShapeId);
+        BodyData* sensorBodyData = Utils::GetUserData(sensorBodyId);
+        AzPhysics::SimulatedBody* sensorBody = sensorBodyData->GetSimulatedBody();
+        if (!sensorBody)
+        {
+            AZ_Error("Box3D", false, "OnBeginSensor:: sensorBody was invalid")
+            return;
+        }
+        if (!sensorBody->GetEntityId().IsValid())
+        {
+            AZ_Warning("Box3D", false, "OnBeginSensor received invalid bodies.")
+            return;
+        }
+
+        b3BodyId visitorBodyId = b3Shape_GetBody(endEvent->visitorShapeId);
+        BodyData* visitorBodyData = Utils::GetUserData(visitorBodyId);
+        AzPhysics::SimulatedBody* visitorBody = visitorBodyData->GetSimulatedBody();
+        if (!visitorBody)
+        {
+            AZ_Error("Box3D", false, "OnBeginSensor:: visitorBody was invalid")
+            return;
+        }
+        if (!visitorBody->GetEntityId().IsValid())
+        {
+            AZ_Warning("Box3D", false, "OnBeginSensor received invalid bodies.")
+            return;
+        }
+
+        AzPhysics::TriggerEvent trigger;
+        trigger.m_type = AzPhysics::TriggerEvent::Type::Exit;
+        trigger.m_triggerBodyHandle = sensorBodyData->GetBodyHandle();
+        trigger.m_triggerBody = sensorBody;
+        trigger.m_triggerShape = Utils::GetUserData(endEvent->sensorShapeId);
+        trigger.m_otherBodyHandle = visitorBodyData->GetBodyHandle();
+        trigger.m_otherBody = visitorBody;
+        trigger.m_otherShape = Utils::GetUserData(endEvent->visitorShapeId);
+        
+        m_queuedTriggerEvents.emplace_back(AZStd::move(trigger));
     }
 
     void Box3DScene::FlushQueuedEvents()
