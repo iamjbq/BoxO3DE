@@ -128,7 +128,8 @@ namespace B3
         newBodyDef.sleepThreshold = configuration.m_sleepMinEnergy;
         newBodyDef.name = configuration.m_debugName.c_str();
         newBodyDef.isAwake = !m_startAsleep;
-        newBodyDef.isEnabled = configuration.m_startSimulationEnabled;
+        newBodyDef.isEnabled = true;
+        // newBodyDef.isEnabled = configuration.m_startSimulationEnabled; // TODO: Initial velocities and sleep state are lost when enabled later
         
         b3MotionLocks motionLocks = {0};
         motionLocks.linearX = configuration.m_lockLinearX;
