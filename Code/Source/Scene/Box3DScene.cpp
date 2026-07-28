@@ -21,6 +21,8 @@
 #include <AzFramework/Physics/Configuration/StaticRigidBodyConfiguration.h>
 #include <AzFramework/Physics/Material/PhysicsMaterialManager.h>
 
+#include "Common/Box3DSceneQueryHelpers.h"
+
 namespace B3
 {
     AZ_CVAR(bool, box3d_multithreadedSimulation, true, nullptr, AZ::ConsoleFunctorFlags::NeedsReload, "Multithreaded world simulation. "
@@ -166,6 +168,316 @@ namespace B3
         // static float b3RestitutionCallback(float restitutionA, uint64_t userMaterialIdA, float restitutionB, uint64_t userMaterialIdB)
         // {
         //     
+        // }
+        
+        static float RayCastCallbackFunction(b3ShapeId shapeId, b3Pos point, b3Vec3 normal, [[maybe_unused]] float fraction,
+                                [[maybe_unused]] uint64_t userMaterialId, int triangleIndex, [[maybe_unused]] int childIndex, void* context)
+        {
+            auto* castContext = static_cast<SceneQueryHelpers::WorldCastResultContext*>(context);
+            
+            if (castContext->m_currentResultCount >= castContext->m_sceneMaxResults)
+            {
+                return 0.f;
+            }
+            
+            const b3BodyId bodyId = b3Shape_GetBody(shapeId);
+            
+            switch (castContext->m_raycastRequest->m_queryType)
+            {
+            case AzPhysics::SceneQuery::QueryType::Dynamic:
+                {
+                    if (b3Body_GetType(bodyId) == b3_staticBody)
+                    {
+                        return -1.f; // Ignore this shape and continue 
+                    }
+                    break;  
+                }
+            case AzPhysics::SceneQuery::QueryType::Static:
+                {
+                    if (b3Body_GetType(bodyId) == b3_dynamicBody)
+                    {
+                        return -1.f; // Ignore this shape and continue 
+                    }
+                    break;
+                }
+            case AzPhysics::SceneQuery::QueryType::StaticAndDynamic:
+                {
+                    break; // All hits are okay
+                }
+            }
+            
+            
+            AzPhysics::SceneQueryHit hit;
+            
+            hit.m_distance = b3Distance(point, Box3DMathConvert(castContext->m_raycastRequest->m_start));
+            hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Distance;
+            
+            hit.m_position = Box3DMathConvert(point);
+            hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Position;
+            
+            hit.m_normal = Box3DMathConvert(normal);
+            hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Normal;
+            
+            const BodyData* bodyData = Utils::GetUserData(bodyId);
+            hit.m_bodyHandle = bodyData->GetBodyHandle();
+            if (hit.m_bodyHandle != AzPhysics::InvalidSimulatedBodyHandle)
+            {
+                hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::BodyHandle;
+            }
+            
+            hit.m_entityId = bodyData->GetEntityId();
+            if (hit.m_entityId.IsValid())
+            {
+                hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::EntityId;
+            }
+            
+            hit.m_shape = Utils::GetUserData(shapeId);
+            if (hit.m_shape != nullptr)
+            {
+                hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Shape;
+            }
+            
+            b3SurfaceMaterial material = b3Shape_GetMeshSurfaceMaterial(shapeId, triangleIndex);
+            
+            if (material.userMaterialId != 0)
+            {
+                // TODO: Implement map to track material Ids (subIds on the MaterialId class)
+                // AZ::Interface<Physics::MaterialManager>::Get()->GetMaterial(material.userMaterialId);
+            }
+            else if (hit.m_shape != nullptr)
+            {
+                hit.m_physicsMaterialId = hit.m_shape->GetMaterialId();
+            }
+            else
+            {
+                hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Material;
+            }
+            
+            castContext->m_hits.m_hits.emplace_back(hit);
+            castContext->m_currentResultCount += 1;
+            
+            return 1.f; // Continue on to next hit
+        }
+        
+        //helper to perform a ray cast
+        bool RayCast(const AzPhysics::RayCastRequest* raycastRequest,
+            // AZStd::vector<physx::PxRaycastHit>& raycastBuffer,
+            b3WorldId* box3DWorldId,
+            // const physx::PxQueryFilterData queryData,
+            const AZ::u32 sceneMaxResults, // raycast buffer size
+            AzPhysics::SceneQueryHits& hits)
+        {
+            const b3Vec3 start = Box3DMathConvert(raycastRequest->m_start);
+            const b3Vec3 translation = Box3DMathConvert(raycastRequest->m_direction) * raycastRequest->m_distance;
+        
+            b3QueryFilter filter = b3DefaultQueryFilter();
+            
+            SceneQueryHelpers::WorldCastResultContext castContext(raycastRequest, sceneMaxResults, hits);
+            
+            bool status = false;
+            
+            // if this query need to report multiple hits, we need to prepare a buffer to hold up to the max allowed.
+            // physx::PxRaycastBuffer castResult;
+            // SceneQueryHelpers::PhysXQueryFilterCallback queryFilterCallback;
+            if (raycastRequest->m_reportMultipleHits)
+            {
+                b3World_CastRay(*box3DWorldId, start, translation, filter, &RayCastCallbackFunction, &castContext);
+                status = true;
+                // const AZ::u32 maxSize = AZStd::min(raycastRequest->m_maxResults, sceneMaxResults);
+                // if (raycastBuffer.size() < maxSize) // TODO: this needs to be limited by the config setting
+                // {
+                //     raycastBuffer.resize(maxSize);
+                // }
+                // castResult = physx::PxRaycastBuffer(raycastBuffer.begin(), maxSize);
+                // queryFilterCallback = SceneQueryHelpers::PhysXQueryFilterCallback(
+                //     raycastRequest->m_collisionGroup,
+                //     raycastRequest->m_filterCallback,
+                //     physx::PxQueryHitType::eTOUCH);
+                return status;
+            }
+            else
+            {
+                b3RayResult result = b3World_CastRayClosest(*box3DWorldId, start, translation, filter);
+                
+                if (result.hit)
+                {
+                    status = true;
+                }
+                
+                // queryFilterCallback = SceneQueryHelpers::PhysXQueryFilterCallback(
+                //     raycastRequest->m_collisionGroup,
+                //     SceneQueryHelpers::GetSceneQueryBlockFilterCallback(raycastRequest->m_filterCallback),
+                //     physx::PxQueryHitType::eBLOCK);
+                return status;
+            }
+
+            // const physx::PxHitFlags hitFlags = SceneQueryHelpers::GetPxHitFlags(raycastRequest->m_hitFlags);
+            //Raycast
+            {
+                // status = box3DWorldId->raycast(orig, dir, raycastRequest->m_distance, castResult, hitFlags, queryData, &queryFilterCallback);
+            }
+
+            // if (status)
+            // {
+            //     if (castResult.hasBlock)
+            //     {
+            //         hits.m_hits.emplace_back(SceneQueryHelpers::GetHitFromPxHit(castResult.block, castResult.block));
+            //     }
+            //
+            //     if (raycastRequest->m_reportMultipleHits)
+            //     {
+            //         for (auto i = 0u; i < castResult.getNbTouches(); ++i)
+            //         {
+            //             const auto& pxHit = castResult.getTouch(i);
+            //             hits.m_hits.emplace_back(SceneQueryHelpers::GetHitFromPxHit(pxHit, pxHit));
+            //         }
+            //     }
+            // }
+            // return status;
+        }
+
+        // // helper to preform a shape cast
+        // bool ShapeCast(const AzPhysics::ShapeCastRequest* shapecastRequest,
+        //     AZStd::vector<physx::PxSweepHit>& shapecastBuffer,
+        //     physx::PxScene* physxScene,
+        //     const physx::PxQueryFilterData queryData,
+        //     const AZ::u32 sceneMaxResults,
+        //     AzPhysics::SceneQueryHits& hits)
+        // {
+        //     // if this query need to report multiple hits, we need to prepare a buffer to hold up to the max allowed.
+        //     // The filter should also use the eTOUCH flag to find all contacts with the shape.
+        //     // Otherwise the default buffer (1 result) and eBLOCK flag is enough to find the first hit.
+        //     physx::PxSweepBuffer castResult;
+        //     SceneQueryHelpers::PhysXQueryFilterCallback queryFilterCallback;
+        //     if (shapecastRequest->m_reportMultipleHits)
+        //     {
+        //         const AZ::u32 maxSize = AZStd::min(shapecastRequest->m_maxResults, sceneMaxResults);
+        //         if (shapecastBuffer.size() < maxSize) //todo this needs to be limited by the config setting
+        //         {
+        //             shapecastBuffer.resize(maxSize);
+        //         }
+        //         castResult = physx::PxSweepBuffer(shapecastBuffer.begin(), maxSize);
+        //         queryFilterCallback = SceneQueryHelpers::PhysXQueryFilterCallback(
+        //             shapecastRequest->m_collisionGroup,
+        //             shapecastRequest->m_filterCallback,
+        //             physx::PxQueryHitType::eTOUCH);
+        //     }
+        //     else
+        //     {
+        //         queryFilterCallback = SceneQueryHelpers::PhysXQueryFilterCallback(
+        //             shapecastRequest->m_collisionGroup,
+        //             SceneQueryHelpers::GetSceneQueryBlockFilterCallback(shapecastRequest->m_filterCallback),
+        //             physx::PxQueryHitType::eBLOCK);
+        //     }
+        //
+        //     physx::PxGeometryHolder pxGeometry;
+        //     Utils::CreatePxGeometryFromConfig(*(shapecastRequest->m_shapeConfiguration), pxGeometry);
+        //
+        //     if (pxGeometry.any().getType() == physx::PxGeometryType::eSPHERE ||
+        //         pxGeometry.any().getType() == physx::PxGeometryType::eBOX ||
+        //         pxGeometry.any().getType() == physx::PxGeometryType::eCAPSULE ||
+        //         pxGeometry.any().getType() == physx::PxGeometryType::eCONVEXMESH)
+        //     {
+        //         const physx::PxTransform pose = PxMathConvert(shapecastRequest->m_start);
+        //         const physx::PxVec3 dir = PxMathConvert(shapecastRequest->m_direction.GetNormalized());
+        //         AZ_Warning("PhysXScene", (static_cast<AZ::u16>(shapecastRequest->m_hitFlags & AzPhysics::SceneQuery::HitFlags::MTD) != 0),
+        //             "Not having MTD set for shape scene queries may result in incorrect reporting of colliders that are in contact or intersect the initial pose of the sweep.");
+        //         const physx::PxHitFlags hitFlags = SceneQueryHelpers::GetPxHitFlags(shapecastRequest->m_hitFlags);
+        //
+        //         bool status = false;
+        //         {
+        //             PHYSX_SCENE_READ_LOCK(*physxScene);
+        //             status = physxScene->sweep(pxGeometry.any(), pose, dir, shapecastRequest->m_distance,
+        //                 castResult, hitFlags, queryData, &queryFilterCallback);
+        //         }
+        //
+        //         if (status)
+        //         {
+        //             if (castResult.hasBlock)
+        //             {
+        //                 hits.m_hits.emplace_back(SceneQueryHelpers::GetHitFromPxHit(castResult.block, castResult.block));
+        //             }
+        //
+        //             if (shapecastRequest->m_reportMultipleHits)
+        //             {
+        //                 for (auto i = 0u; i < castResult.getNbTouches(); ++i)
+        //                 {
+        //                     const auto& pxHit = castResult.getTouch(i);
+        //                     hits.m_hits.emplace_back(SceneQueryHelpers::GetHitFromPxHit(pxHit, pxHit));
+        //                 }
+        //             }
+        //         }
+        //
+        //         return status;
+        //     }
+        //     else
+        //     {
+        //         AZ_Warning("World", false, "Invalid geometry type passed to shape cast. Only sphere, box, capsule or convex mesh is supported");
+        //     }
+        //
+        //     return false;
+        // }
+        //
+        // bool OverlapGeneric(physx::PxScene* physxScene, const AzPhysics::OverlapRequest* overlapRequest,
+        //     physx::PxOverlapCallback& overlapCallback, const physx::PxQueryFilterData& filterData)
+        // {
+        //     // Prepare overlap data
+        //     const physx::PxTransform pose = PxMathConvert(overlapRequest->m_pose);
+        //     physx::PxGeometryHolder pxGeometry;
+        //     Utils::CreatePxGeometryFromConfig(*(overlapRequest->m_shapeConfiguration), pxGeometry);
+        //
+        //     SceneQueryHelpers::PhysXQueryFilterCallback filterCallback(
+        //         overlapRequest->m_collisionGroup,
+        //         SceneQueryHelpers::GetFilterCallbackFromOverlap(overlapRequest->m_filterCallback),
+        //         physx::PxQueryHitType::eTOUCH);
+        //
+        //     bool status = false;
+        //     {
+        //         PHYSX_SCENE_READ_LOCK(*physxScene);
+        //         status = physxScene->overlap(pxGeometry.any(), pose, overlapCallback, filterData, &filterCallback);
+        //     }
+        //     return status;
+        // }
+        //
+        // bool OverlapQuery(const AzPhysics::OverlapRequest* overlapRequest,
+        //     AZStd::vector<physx::PxOverlapHit>& overlapBuffer,
+        //     physx::PxScene* physxScene,
+        //     const physx::PxQueryFilterData queryData,
+        //     const AZ::u32 sceneMaxResults,
+        //     AzPhysics::SceneQueryHits& hits)
+        // {
+        //     const AZ::u32 maxSize = AZStd::min(overlapRequest->m_maxResults, sceneMaxResults);
+        //     if (overlapBuffer.size() < maxSize)
+        //     {
+        //         overlapBuffer.resize(maxSize);
+        //     }
+        //
+        //     if (overlapRequest->m_unboundedOverlapHitCallback)
+        //     {
+        //         SceneQueryHelpers::UnboundedOverlapCallback callback(overlapRequest->m_unboundedOverlapHitCallback, overlapBuffer, hits);
+        //         const bool status = OverlapGeneric(physxScene, overlapRequest, callback, queryData);
+        //         return status;
+        //     }
+        //
+        //     physx::PxOverlapBuffer queryHits(overlapBuffer.begin(), maxSize);
+        //     bool status = OverlapGeneric(physxScene, overlapRequest, queryHits, queryData);
+        //
+        //     if (status)
+        //     {
+        //         // Process results
+        //         AZ::u32 hitNum = queryHits.getNbAnyHits();
+        //         hits.m_hits.reserve(hits.m_hits.size() + hitNum);
+        //         for (AZ::u32 i = 0; i < hitNum; ++i)
+        //         {
+        //             const AzPhysics::SceneQueryHit hit = SceneQueryHelpers::GetHitFromPxOverlapHit(queryHits.getAnyHit(i));
+        //             if (hit.IsValid())
+        //             {
+        //                 hits.m_hits.emplace_back(hit);
+        //             }
+        //         }
+        //     }
+        //
+        //     return status;
         // }
     }
     
@@ -441,7 +753,7 @@ namespace B3
         }
         else
         {
-            AZ_Warning("Box3DScene", false, "Unknown SimulatedBodyConfiguration.");
+            AZ_Warning("Box3DScene", false, "Unknown SimulatedBodyConfiguration.")
             return AzPhysics::InvalidSimulatedBodyHandle;
         }
 
@@ -459,8 +771,8 @@ namespace B3
                 //fill any free slots first before increasing the size of the simulatedBodies vector.
                 index = m_freeSceneSlots.front();
                 m_freeSceneSlots.pop();
-                AZ_Assert(index < m_simulatedBodies.size(), "Box3DScene::AddSimulatedBody: Free simulated body index is out of bounds");
-                AZ_Assert(m_simulatedBodies[index].second == nullptr, "Box3DScene::AddSimulatedBody: Free simulated body index is not free");
+                AZ_Assert(index < m_simulatedBodies.size(), "Box3DScene::AddSimulatedBody: Free simulated body index is out of bounds")
+                AZ_Assert(m_simulatedBodies[index].second == nullptr, "Box3DScene::AddSimulatedBody: Free simulated body index is not free")
 
                 m_simulatedBodies[index] = AZStd::make_pair(newBodyCrc, newBody);
             }
@@ -576,7 +888,7 @@ namespace B3
         }
         else
         {
-            AZ_Warning("PhysXScene", false, "Unable to enable Simulated body, failed to find body.")
+            AZ_Warning("Box3DScene", false, "Unable to enable Simulated body, failed to find body.")
         }
     }
 
@@ -600,7 +912,7 @@ namespace B3
         }
         else
         {
-            AZ_Warning("PhysXScene", false, "Unable to disable Simulated body, failed to find body.")
+            AZ_Warning("Box3DScene", false, "Unable to disable Simulated body, failed to find body.")
         }
     }
 
@@ -660,33 +972,29 @@ namespace B3
         {
             return false; // return 0 hits
         }
-
-        // Query flags.
-        // const physx::PxQueryFlags queryFlags = SceneQueryHelpers::GetPxQueryFlags(request->m_queryType);
-        // const physx::PxQueryFilterData queryData(queryFlags);
-        //
-        // switch (request->m_requestType)
-        // {
-        // case AzPhysics::SceneQueryRequest::RequestType::Raycast:
-        //     {
-        //         return Internal::RayCast(static_cast<const AzPhysics::RayCastRequest*>(request),
-        //             s_rayCastBuffer, m_pxScene, queryData, m_raycastBufferSize, result);
-        //     }
-        // case AzPhysics::SceneQueryRequest::RequestType::Shapecast:
-        //     {
-        //         return Internal::ShapeCast(static_cast<const AzPhysics::ShapeCastRequest*>(request),
-        //             s_sweepBuffer, m_pxScene, queryData, m_shapecastBufferSize, result);
-        //     }
-        // case AzPhysics::SceneQueryRequest::RequestType::Overlap:
-        //     {
-        //         return Internal::OverlapQuery(static_cast<const AzPhysics::OverlapRequest*>(request),
-        //             s_overlapBuffer, m_pxScene, queryData, m_overlapBufferSize, result);
-        //     }
-        // default:
-        //     {
-        //         AZ_Warning("Physx", false, "Unknown Scene Query request type.");
-        //     }
-        // };
+        
+        switch (request->m_requestType)
+        {
+        case AzPhysics::SceneQueryRequest::RequestType::Raycast:
+            {
+                // return Internal::RayCast(static_cast<const AzPhysics::RayCastRequest*>(request),
+                //     s_rayCastBuffer, m_pxScene, queryData, m_raycastBufferSize, result);
+            }
+        case AzPhysics::SceneQueryRequest::RequestType::Shapecast:
+            {
+                // return Internal::ShapeCast(static_cast<const AzPhysics::ShapeCastRequest*>(request),
+                //     s_sweepBuffer, m_pxScene, queryData, m_shapecastBufferSize, result);
+            }
+        case AzPhysics::SceneQueryRequest::RequestType::Overlap:
+            {
+                // return Internal::OverlapQuery(static_cast<const AzPhysics::OverlapRequest*>(request),
+                //     s_overlapBuffer, m_pxScene, queryData, m_overlapBufferSize, result);
+            }
+        default:
+            {
+                AZ_Warning("Box3D", false, "Unknown Scene Query request type.")
+            }
+        }
 
         return false;
     }
@@ -706,7 +1014,7 @@ namespace B3
         const AzPhysics::SceneQueryRequest* request, AzPhysics::SceneQuery::AsyncCallback callback)
     {
         AZ_UNUSED_3(requestId, request, callback)
-        AZ_Warning("Box3D", false, "Currently unimplemented.");
+        AZ_Warning("Box3D", false, "QuerySceneAsync currently unimplemented.")
         return false;
     }
 
@@ -714,7 +1022,7 @@ namespace B3
         const AzPhysics::SceneQueryRequests& requests, AzPhysics::SceneQuery::AsyncBatchCallback callback)
     {
         AZ_UNUSED_3(requestId, requests, callback)
-        AZ_Warning("Box3D", false, "Currently unimplemented.");
+        AZ_Warning("Box3D", false, "QuerySceneAsyncBatch currently unimplemented.")
         return false;
     }
 
@@ -798,18 +1106,16 @@ namespace B3
         //     !azrtti_istypeof<PhysX::ArticulationLink>(body))
         {
             auto bodyId = static_cast<b3BodyId*>(body.GetNativePointer());
-            AZ_Assert(b3Body_IsValid(*bodyId), "Simulated Body doesn't have a valid Body ID");
+            AZ_Assert(b3Body_IsValid(*bodyId), "Simulated Body doesn't have a valid Body ID")
              
             b3Body_Enable(*bodyId);
              
-            // We don't need to force asleep here since the body def starts it asleep whenever it's enabled
-            if (b3Body_IsEnabled(*bodyId))
-            {
-                auto pos = b3Body_GetPosition(*bodyId);
-                // AZ_Printf("EnableSimulationOfBody", "Body position: %.2f, %.2f, %.2f", pos.x, pos.y, pos.z)
-            }
+            // if (b3Body_IsEnabled(*bodyId))
+            // {
+            //     auto pos = b3Body_GetPosition(*bodyId);
+            //     AZ_Printf("EnableSimulationOfBody", "Body position: %.2f, %.2f, %.2f", pos.x, pos.y, pos.z)
+            // }
         }
-        
         
         body.m_simulating = true;
     }

@@ -23,5 +23,13 @@ namespace B3
             AzPhysics::SceneQueryHit hit;
             return hit;
         }
+
+        WorldCastResultContext::WorldCastResultContext(const AzPhysics::RayCastRequest* raycastRequest,
+            const AZ::u32 sceneMaxResults, AzPhysics::SceneQueryHits& hits)
+            : m_raycastRequest(raycastRequest)
+            , m_sceneMaxResults(sceneMaxResults)
+            , m_hits(hits)
+        {
+        }
     }
 }
