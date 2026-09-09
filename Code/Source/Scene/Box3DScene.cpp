@@ -206,6 +206,12 @@ namespace B3
                 }
             }
             
+            bool shouldCollide = castContext->m_raycastRequest->m_collisionGroup.GetMask() && b3Shape_GetFilter(shapeId).groupIndex; // TODO: not sure if we need both sets
+            
+            if (!shouldCollide) // TODO: Check collision request flags
+            {
+                return -1.f;
+            }
             
             AzPhysics::SceneQueryHit hit;
             
@@ -276,13 +282,18 @@ namespace B3
             
             bool status = false;
             
-            // if this query need to report multiple hits, we need to prepare a buffer to hold up to the max allowed.
-            // physx::PxRaycastBuffer castResult;
-            // SceneQueryHelpers::PhysXQueryFilterCallback queryFilterCallback;
+            // Hits in Box3D need to be processed in the callback function during the cast, so filtering is done there
+            // and hits are added directly through the context class
+            // If only one hit is requested, it is done using a helper CastRayCloset function
             if (raycastRequest->m_reportMultipleHits)
             {
                 b3World_CastRay(*box3DWorldId, start, translation, filter, &RayCastCallbackFunction, &castContext);
-                status = true;
+                
+                if (hits.m_hits.size() > 0)
+                {
+                    status = true;
+                }
+                
                 // const AZ::u32 maxSize = AZStd::min(raycastRequest->m_maxResults, sceneMaxResults);
                 // if (raycastBuffer.size() < maxSize) // TODO: this needs to be limited by the config setting
                 // {
@@ -293,6 +304,7 @@ namespace B3
                 //     raycastRequest->m_collisionGroup,
                 //     raycastRequest->m_filterCallback,
                 //     physx::PxQueryHitType::eTOUCH);
+                
                 return status;
             }
             else
@@ -302,6 +314,53 @@ namespace B3
                 if (result.hit)
                 {
                     status = true;
+                    
+                    AzPhysics::SceneQueryHit hit;
+            
+                    hit.m_distance = b3Distance(result.point, start);
+                    hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Distance;
+            
+                    hit.m_position = Box3DMathConvert(result.point);
+                    hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Position;
+            
+                    hit.m_normal = Box3DMathConvert(result.normal);
+                    hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Normal;
+                
+                    const b3BodyId bodyId = b3Shape_GetBody(result.shapeId);
+                    const BodyData* bodyData = Utils::GetUserData(bodyId);
+                    hit.m_bodyHandle = bodyData->GetBodyHandle();
+                    if (hit.m_bodyHandle != AzPhysics::InvalidSimulatedBodyHandle)
+                    {
+                        hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::BodyHandle;
+                    }
+            
+                    hit.m_entityId = bodyData->GetEntityId();
+                    if (hit.m_entityId.IsValid())
+                    {
+                        hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::EntityId;
+                    }
+            
+                    hit.m_shape = Utils::GetUserData(result.shapeId);
+                    if (hit.m_shape != nullptr)
+                    {
+                        hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Shape;
+                    }
+            
+                    b3SurfaceMaterial material = b3Shape_GetMeshSurfaceMaterial(result.shapeId, result.triangleIndex);
+            
+                    if (material.userMaterialId != 0)
+                    {
+                        // TODO: Implement map to track material Ids (subIds on the MaterialId class)
+                        // AZ::Interface<Physics::MaterialManager>::Get()->GetMaterial(material.userMaterialId);
+                    }
+                    else if (hit.m_shape != nullptr)
+                    {
+                        hit.m_physicsMaterialId = hit.m_shape->GetMaterialId();
+                    }
+                    else
+                    {
+                        hit.m_resultFlags |= AzPhysics::SceneQuery::ResultFlags::Material;
+                    }
                 }
                 
                 // queryFilterCallback = SceneQueryHelpers::PhysXQueryFilterCallback(

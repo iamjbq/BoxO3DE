@@ -633,6 +633,7 @@ namespace B3
             
             int size = static_cast<int>(b3Points.size());
             b3HullData* hull = b3CreateHull(b3Points.data(), size, size);
+            // TODO: hull final half edge count of 480 exceeds limit of 255 from non-uniform sphere
             
             if (hull == nullptr)
             {
